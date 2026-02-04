@@ -1,8 +1,12 @@
 <template>
   <div id="app" class="app-container">
     <div class="header">
-      <h1 class="title">🌸 心情花园 🌸</h1>
-      <p class="subtitle">记录每一份情绪，培育属于自己的心灵花园</p>
+        <div class="header-content">
+          <div>
+            <h1 class="title">🌸 心情花园 🌸</h1>
+            <p class="subtitle">记录每一份情绪，培育属于自己的心灵花园</p>
+          </div>
+        </div>
     </div>
 
     <div class="main-content">
@@ -57,6 +61,18 @@
               />
               <t-button theme="primary" @click="sendChatMessage">发送</t-button>
             </div>
+            <!-- 总结日记按钮 -->
+            <div class="summary-section" v-if="chatMessages.length > 0">
+              <t-button
+                theme="success"
+                variant="outline"
+                :loading="isSummarizing"
+                @click="summarizeDiary"
+              >
+                <template #icon>✨</template>
+                总结日记
+              </t-button>
+            </div>
           </div>
 
           <!-- 模式切换 -->
@@ -81,11 +97,13 @@
               theme="success"
               size="large"
               :disabled="!canSave"
+              :loading="aiService.isLoading.value"
               @click="saveMood"
             >
               在花园里种下一朵花 🌷
             </t-button>
           </div>
+
         </t-card>
       </div>
 
@@ -151,12 +169,36 @@
         </div>
       </div>
     </t-dialog>
+
+    <!-- AI配置弹窗 -->
+    <t-dialog
+      v-model:visible="showConfigDialog"
+      header="AI服务已配置"
+      :confirm-btn="{
+        content: '我知道了',
+        theme: 'primary'
+      }"
+      @confirm="showConfigDialog = false"
+    >
+      <div class="config-dialog">
+        <div class="config-info">
+          <p class="info-text">AI服务已由系统预配置，您可以直接使用智能聊天功能，无需额外设置。</p>
+          <div class="current-status">
+            <span>当前使用：</span>
+            <span class="status-ok">
+              {{ aiService.getConfig().providerName }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </t-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, nextTick, onMounted } from 'vue'
 import { MessagePlugin, DialogPlugin } from 'tdesign-vue-next'
+import aiService from './services/aiService.js'
 
 // 心情选项
 const moods = [
@@ -181,26 +223,38 @@ const chatContainer = ref(null)
 const moodRecords = ref([])
 const showDetailDialog = ref(false)
 const selectedRecord = ref(null)
+const showConfigDialog = ref(false)
+const isAIResponseLoading = ref(false)
+const isSummarizing = ref(false)
+const generatedDiary = ref('')
 
 // 计算属性
 const canSave = computed(() => {
   return selectedMood.value && (diaryContent.value.trim() || chatMessages.value.length > 0)
 })
 
-// AI模拟对话
-const aiResponses = [
-  "我理解你现在的感受，能多跟我说说吗？",
-  "听起来你今天过得很特别，还有什么想分享的吗？",
-  "你的情绪很重要，我会一直在这里倾听。",
-  "这一天对你来说有什么特别的吗？",
-  "谢谢你和我分享，我会帮你记住这份心情。",
-  "我能感受到你此刻的情绪，继续说下去吧。",
-  "每一份情绪都值得被记录和珍视。",
-  "你的感受很真实，继续和我说说吧。"
-]
+// 查看生成结果
+const showDiaryResult = () => {
+  DialogPlugin.confirm({
+    header: '生成的日记',
+    body: () => {
+      return `<div class="diary-result">${generatedDiary.value}</div>`
+    },
+    confirmBtn: '保存到花园',
+    cancelBtn: '再编辑一下',
+    onConfirm: () => {
+      diaryContent.value = generatedDiary.value
+      recordMode.value = 'write'
+    },
+    onCancel: () => {
+      diaryContent.value = generatedDiary.value
+      recordMode.value = 'write'
+    }
+  })
+}
 
 // 发送聊天消息
-const sendChatMessage = () => {
+const sendChatMessage = async () => {
   if (!chatInput.value.trim()) return
 
   // 添加用户消息
@@ -212,57 +266,126 @@ const sendChatMessage = () => {
   const userInput = chatInput.value
   chatInput.value = ''
 
-  // 模拟AI回复
-  setTimeout(() => {
-    const randomResponse = aiResponses[Math.floor(Math.random() * aiResponses.length)]
+  // 滚动到底部
+  nextTick(() => {
+    if (chatContainer.value) {
+      chatContainer.value.scrollTop = chatContainer.value.scrollHeight
+    }
+  })
+
+  try {
+    isAIResponseLoading.value = true
+    const aiResponse = await aiService.generateAIResponse(
+      chatMessages.value,
+      selectedMood.value || 'calm'
+    )
+
     chatMessages.value.push({
       role: 'ai',
-      content: randomResponse
+      content: aiResponse
     })
-    
+
     // 滚动到底部
     nextTick(() => {
       if (chatContainer.value) {
         chatContainer.value.scrollTop = chatContainer.value.scrollHeight
       }
     })
-  }, 1000)
+  } catch (err) {
+    console.error('发送消息错误:', err)
+    MessagePlugin.error(err.message || 'AI回复失败，请重试')
+  } finally {
+    isAIResponseLoading.value = false
+  }
 }
 
 // 保存心情
-const saveMood = () => {
+const saveMood = async () => {
   if (!canSave.value) return
 
-  const record = {
-    id: Date.now(),
-    mood: selectedMood.value,
-    date: new Date().toISOString(),
-    diary: recordMode.value === 'write' ? diaryContent.value : generateAISummary(),
-    chatHistory: recordMode.value === 'chat' ? [...chatMessages.value] : null,
-    mode: recordMode.value
-  }
+  try {
+    let diaryContentToSave
 
-  moodRecords.value.unshift(record)
-  saveToLocalStorage()
-  
-  // 重置表单
-  selectedMood.value = ''
-  diaryContent.value = ''
-  chatMessages.value = []
-  
-  MessagePlugin.success(`🌸 一朵${getMoodLabel(selectedMood.value || record.mood)}之花已在花园绽放`)
+    if (recordMode.value === 'write') {
+      diaryContentToSave = diaryContent.value
+    } else {
+      // 如果是AI对话模式，生成总结
+      MessagePlugin.loading('正在生成日记总结...')
+      diaryContentToSave = await generateAISummary()
+    }
+
+    const record = {
+      id: Date.now(),
+      mood: selectedMood.value,
+      date: new Date().toISOString(),
+      diary: diaryContentToSave,
+      chatHistory: recordMode.value === 'chat' ? [...chatMessages.value] : null,
+      mode: recordMode.value
+    }
+
+    moodRecords.value.unshift(record)
+    saveToLocalStorage()
+
+    // 重置表单（只重置内容，保留心情选择，允许重复记录）
+    diaryContent.value = ''
+    chatMessages.value = []
+    generatedDiary.value = ''
+
+    MessagePlugin.success(`🌸 一朵${getMoodLabel(record.mood)}之花已在花园绽放`)
+  } catch (err) {
+    MessagePlugin.error('保存失败，请重试')
+    console.error('保存失败:', err)
+  }
 }
 
 // AI总结日记
-const generateAISummary = () => {
-  const summaries = [
-    `今天我经历了一次与AI的对话，记录下了当下的感受。虽然对话简单，但每一个字都承载着真实的情绪。${chatMessages.value.length > 1 ? '通过与AI的交流，我更清晰地认识到了自己的内心世界。' : ''}`,
-    `这一天，我选择用对话的方式记录心情。${chatMessages.value[0]?.content || ''} AI的倾听让我感到温暖，这份互动成为今日最珍贵的回忆。`,
-    `在${new Date().toLocaleDateString()}的这个时刻，我与AI进行了一次深入的心灵对话。每一句话都是情感的真实流露，AI的陪伴让我不再孤单。`,
-    `今天的日记来源于与AI的对话。${chatMessages.value.slice(0, 2).map(msg => msg.content).join(' ')} 这份独特的记录方式让情绪表达变得更加轻松自在。`
-  ]
-  
-  return summaries[Math.floor(Math.random() * summaries.length)]
+const generateAISummary = async () => {
+  try {
+    const summary = await aiService.generateAISummary(
+      chatMessages.value,
+      selectedMood.value || 'calm'
+    )
+    return summary
+  } catch (err) {
+    console.log('使用默认总结:', err.message)
+    return aiService.generateDefaultSummary(chatMessages.value, selectedMood.value || 'calm')
+  }
+}
+
+// 总结日记
+const summarizeDiary = async () => {
+  if (!selectedMood.value) {
+    MessagePlugin.warning('请先选择今天的心情')
+    return
+  }
+
+  try {
+    isSummarizing.value = true
+    MessagePlugin.loading('正在生成日记，让灵感绽放...')
+    generatedDiary.value = await generateAISummary()
+    MessagePlugin.success('日记生成成功！')
+
+    // 显示生成的日记
+    DialogPlugin.confirm({
+      header: '📝 生成的日记',
+      body: () => {
+        return `<div class="diary-result">${generatedDiary.value.replace(/\n/g, '<br>')}</div>`
+      },
+      confirmBtn: '保存到花园',
+      cancelBtn: '重新生成',
+      onConfirm: () => {
+        diaryContent.value = generatedDiary.value
+        recordMode.value = 'write'
+      },
+      onCancel: () => {
+        summarizeDiary()
+      }
+    })
+  } catch (err) {
+    MessagePlugin.error('生成日记失败，请重试')
+  } finally {
+    isSummarizing.value = false
+  }
 }
 
 // 获取花朵
@@ -333,6 +456,12 @@ const loadFromLocalStorage = () => {
 onMounted(() => {
   loadFromLocalStorage()
 })
+
+// AI配置相关
+const openConfigDialog = () => {
+  showConfigDialog.value = true
+}
+
 </script>
 
 <style scoped>
@@ -352,6 +481,16 @@ onMounted(() => {
   box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
 }
 
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-content > div:first-child {
+  flex: 1;
+}
+
 .title {
   font-size: 2.5rem;
   color: white;
@@ -363,6 +502,11 @@ onMounted(() => {
   color: rgba(255, 255, 255, 0.9);
   font-size: 1.1rem;
 }
+
+.header-actions {
+  flex-shrink: 0;
+}
+
 
 .main-content {
   max-width: 1200px;
@@ -505,6 +649,15 @@ onMounted(() => {
 
 .chat-input input {
   flex: 1;
+}
+
+.summary-section {
+  margin-top: 15px;
+  text-align: center;
+}
+
+.summary-section button {
+  width: 100%;
 }
 
 /* 模式切换 */
@@ -705,8 +858,60 @@ onMounted(() => {
   margin-top: 20px;
 }
 
+/* AI配置对话框 */
+.config-dialog {
+  padding: 10px 0;
+}
+
+.config-info {
+  background: #f9f9f9;
+  padding: 20px;
+  border-radius: 8px;
+}
+
+.info-text {
+  color: #666;
+  margin-bottom: 15px;
+  line-height: 1.6;
+}
+
+.current-status {
+  font-size: 0.95rem;
+}
+
+.current-status span {
+  margin-right: 8px;
+}
+
+.status-ok {
+  color: #52c41a;
+  font-weight: 500;
+}
+
+/* 日记结果样式 */
+.diary-result {
+  padding: 20px;
+  background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+  border-radius: 12px;
+  line-height: 2;
+  color: #333;
+  font-size: 1rem;
+  max-height: 400px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+}
+
 /* 响应式 */
 @media (max-width: 768px) {
+  .header-content {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .header-actions {
+    margin-top: 15px;
+  }
+
   .title {
     font-size: 1.8rem;
   }
@@ -723,5 +928,10 @@ onMounted(() => {
     grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
     gap: 15px;
   }
+
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
 }
+
 </style>
