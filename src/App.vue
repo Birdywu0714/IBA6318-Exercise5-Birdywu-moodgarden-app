@@ -1,10 +1,35 @@
 <template>
   <div id="app" class="app-container">
+
+    <!-- 3D花园视图 -->
+    <Garden3D v-if="currentView === 'garden-3d'" :records="moodRecords" @back="currentView = 'garden'" />
+
+    <!-- 普通视图 -->
+    <div v-if="currentView !== 'garden-3d'">
     <div class="header">
         <div class="header-content">
-          <div>
-            <h1 class="title">🌸 心情花园 🌸</h1>
+          <div class="header-text">
+            <h1 class="title">心情花园</h1>
             <p class="subtitle">记录每一份情绪，培育属于自己的心灵花园</p>
+          </div>
+          <div class="header-actions">
+            <t-button theme="light" variant="outline" size="small" @click="showGardenLibraryDialog = true">
+              🏡 花园库配置
+            </t-button>
+            <div class="header-illustration">
+              <svg class="garden-icon" viewBox="0 0 100 100">
+                <defs>
+                  <linearGradient id="flowerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:#FF6B9D" />
+                    <stop offset="100%" style="stop-color:#C44DFF" />
+                  </linearGradient>
+                </defs>
+                <path d="M 50 20 Q 30 50 50 80 Q 70 50 50 20" fill="url(#flowerGradient)" opacity="0.8" />
+                <path d="M 50 20 Q 80 40 50 80 Q 20 40 50 20" fill="url(#flowerGradient)" opacity="0.7" />
+                <path d="M 30 35 Q 50 50 70 35" stroke="#FF6B9D" stroke-width="2" fill="none" opacity="0.5" />
+                <circle cx="50" cy="45" r="8" fill="#FFEAA7" opacity="0.6" />
+              </svg>
+            </div>
           </div>
         </div>
     </div>
@@ -23,7 +48,9 @@
                 :class="{ selected: selectedMood === mood.value }"
                 @click="selectedMood = mood.value"
               >
-                <div class="mood-emoji">{{ mood.emoji }}</div>
+                <div class="mood-illustration-container">
+                  <MoodIllustration :mood="mood.value" />
+                </div>
                 <div class="mood-label">{{ mood.label }}</div>
               </div>
             </div>
@@ -100,7 +127,15 @@
               :loading="aiService.isLoading.value"
               @click="saveMood"
             >
-              在花园里种下一朵花 🌷
+              在花园里种下一朵花
+            </t-button>
+            <t-button
+              theme="primary"
+              size="large"
+              variant="outline"
+              @click="currentView = 'garden-3d'"
+            >
+              进入3D花园
             </t-button>
           </div>
 
@@ -113,19 +148,35 @@
           <h2>我的花园</h2>
           <p class="flower-count">{{ moodRecords.length }} 朵花</p>
         </div>
-        <div class="garden-grid" v-if="moodRecords.length > 0">
+        <t-button
+          theme="primary"
+          size="large"
+          variant="outline"
+          @click="currentView = 'garden-3d'"
+          v-if="moodRecords.length > 0"
+        >
+          查看3D花园世界
+        </t-button>
+        <div class="garden-grid" v-if="moodRecords.length > 0" style="margin-top: 25px;">
           <div
             v-for="(record, index) in moodRecords"
             :key="index"
             class="flower-item"
             @click="viewMoodDetail(record)"
           >
-            <div class="flower">{{ getFlower(record.mood) }}</div>
+            <div class="flower">
+              <FlowerIllustration :mood="record.mood" />
+            </div>
             <div class="flower-date">{{ formatDate(record.date) }}</div>
           </div>
         </div>
         <div class="empty-garden" v-else>
-          <div class="empty-icon">🌱</div>
+          <svg class="empty-icon" viewBox="0 0 100 100">
+            <path d="M 50 20 Q 35 40 50 60 Q 65 40 50 20" fill="#81ECEC" opacity="0.6" />
+            <path d="M 50 20 Q 65 40 50 60 Q 35 40 50 20" fill="#74B9FF" opacity="0.4" />
+            <path d="M 50 65 Q 50 75 50 85" stroke="#81ECEC" stroke-width="2" fill="none" />
+            <ellipse cx="50" cy="88" rx="6" ry="3" fill="#81ECEC" transform="rotate(-30 50 88)" opacity="0.5" />
+          </svg>
           <p>花园还是空的，开始记录第一份心情吧</p>
         </div>
       </div>
@@ -139,7 +190,9 @@
       width="600px"
     >
       <div class="mood-detail" v-if="selectedRecord">
-        <div class="detail-flower">{{ getFlower(selectedRecord.mood) }}</div>
+        <div class="detail-flower">
+          <FlowerIllustration :mood="selectedRecord.mood" />
+        </div>
         <div class="detail-date">{{ formatDetailDate(selectedRecord.date) }}</div>
         <div class="detail-mood">
           心情：{{ getMoodLabel(selectedRecord.mood) }}
@@ -170,6 +223,65 @@
       </div>
     </t-dialog>
 
+    <!-- 花园库配置弹窗 -->
+    <t-dialog
+      v-model:visible="showGardenLibraryDialog"
+      header="🏡 花园库配置"
+      width="800px"
+      :footer="false"
+    >
+      <div class="garden-config-dialog">
+        <div class="config-header">
+          <p class="config-tip">自定义每种情绪对应的花朵类型，打造属于你的独特花园！</p>
+          <div class="config-actions">
+            <t-button theme="default" variant="outline" size="small" @click="resetToDefaultConfig">
+              恢复默认
+            </t-button>
+          </div>
+        </div>
+        <div class="mood-flower-mapping">
+          <div
+            v-for="mood in moods"
+            :key="mood.value"
+            class="mapping-item"
+          >
+            <div class="mood-info">
+              <span class="mood-emoji">{{ mood.emoji }}</span>
+              <span class="mood-name">{{ mood.label }}</span>
+            </div>
+            <div class="flower-selector">
+              <t-select
+                v-model="gardenConfig[mood.value]"
+                :placeholder="`选择${mood.label}的花朵`"
+                size="small"
+                style="width: 200px"
+              >
+                <t-option
+                  v-for="flower in availableFlowers"
+                  :key="flower.value"
+                  :value="flower.value"
+                  :label="flower.label"
+                >
+                  <span class="flower-option">
+                    <span class="flower-emoji">{{ flower.emoji }}</span>
+                    <span class="flower-name">{{ flower.label }}</span>
+                  </span>
+                </t-option>
+              </t-select>
+            </div>
+          </div>
+        </div>
+        <div class="config-footer">
+          <t-button theme="primary" size="large" @click="saveGardenConfig">
+            保存配置
+          </t-button>
+          <t-button theme="default" variant="outline" size="large" @click="showGardenLibraryDialog = false">
+            取消
+          </t-button>
+        </div>
+      </div>
+    </t-dialog>
+
     <!-- AI配置弹窗 -->
     <t-dialog
       v-model:visible="showConfigDialog"
@@ -192,6 +304,7 @@
         </div>
       </div>
     </t-dialog>
+    </div>
   </div>
 </template>
 
@@ -199,6 +312,9 @@
 import { ref, computed, nextTick, onMounted } from 'vue'
 import { MessagePlugin, DialogPlugin } from 'tdesign-vue-next'
 import aiService from './services/aiService.js'
+import MoodIllustration from './components/MoodIllustration.vue'
+import FlowerIllustration from './components/FlowerIllustration.vue'
+import Garden3D from './components/Garden3D.vue'
 
 // 心情选项
 const moods = [
@@ -211,6 +327,34 @@ const moods = [
   { value: 'anxious', label: '焦虑', emoji: '😰', flower: '🍂' },
   { value: 'hopeful', label: '充满希望', emoji: '🌟', flower: '🌺' }
 ]
+
+// 可用的花卉模型列表
+const availableFlowers = [
+  { value: 'sunflower向日葵.glb', label: '向日葵', emoji: '🌻' },
+  { value: 'daisy小雏菊.glb', label: '小雏菊', emoji: '🌼' },
+  { value: 'dandelion蒲公英.glb', label: '蒲公英', emoji: '🌾' },
+  { value: 'generic_tulip_flower郁金香.glb', label: '郁金香', emoji: '🌷' },
+  { value: 'chrysanthemum绿菊花.glb', label: '绿菊花', emoji: '💚' },
+  { value: 'Blue Daze蓝星花.glb', label: '蓝星花', emoji: '💙' },
+  { value: 'Lavender薰衣草.glb', label: '薰衣草', emoji: '💜' },
+  { value: 'pinkmagnolia粉色玉兰花.glb', label: '粉色玉兰花', emoji: '💗' },
+  { value: 'pinkrose粉玫瑰.glb', label: '粉玫瑰', emoji: '🌸' },
+  { value: 'rose_red红玫瑰.glb', label: '红玫瑰', emoji: '❤️' },
+  { value: 'Myosotis勿忘我.glb', label: '勿忘我', emoji: '💙' },
+  { value: 'daffodils黄水仙.glb', label: '黄水仙', emoji: '🌼' }
+]
+
+// 默认花园配置
+const defaultGardenConfig = {
+  happy: 'sunflower向日葵.glb', // 开心 - 向日葵
+  sad: 'daisy小雏菊.glb', // 难过 - 小雏菊
+  angry: 'rose_red红玫瑰.glb', // 生气 - 红玫瑰
+  calm: 'Lavender薰衣草.glb', // 平静 - 薰衣草
+  excited: 'daffodils黄水仙.glb', // 兴奋 - 黄水仙
+  tired: 'pinkrose粉玫瑰.glb', // 疲惫 - 粉玫瑰
+  anxious: 'dandelion蒲公英.glb', // 焦虑 - 蒲公英
+  hopeful: 'Blue Daze蓝星花.glb' // 充满希望 - 蓝星花
+}
 
 // 状态管理
 const currentView = ref('garden')
@@ -227,6 +371,8 @@ const showConfigDialog = ref(false)
 const isAIResponseLoading = ref(false)
 const isSummarizing = ref(false)
 const generatedDiary = ref('')
+const showGardenLibraryDialog = ref(false) // 花园库配置弹窗
+const gardenConfig = ref({ ...defaultGardenConfig }) // 当前花园配置
 
 // 计算属性
 const canSave = computed(() => {
@@ -332,6 +478,11 @@ const saveMood = async () => {
     generatedDiary.value = ''
 
     MessagePlugin.success(`🌸 一朵${getMoodLabel(record.mood)}之花已在花园绽放`)
+
+    // 自动跳转到3D花园
+    setTimeout(() => {
+      currentView.value = 'garden-3d'
+    }, 1000)
   } catch (err) {
     MessagePlugin.error('保存失败，请重试')
     console.error('保存失败:', err)
@@ -455,7 +606,36 @@ const loadFromLocalStorage = () => {
 // 生命周期
 onMounted(() => {
   loadFromLocalStorage()
+  loadGardenConfig()
 })
+
+// 花园库配置相关
+const loadGardenConfig = () => {
+  try {
+    const savedConfig = localStorage.getItem('gardenLibraryConfig')
+    if (savedConfig) {
+      gardenConfig.value = JSON.parse(savedConfig)
+    }
+  } catch (e) {
+    console.error('读取花园配置失败:', e)
+  }
+}
+
+const saveGardenConfig = () => {
+  try {
+    localStorage.setItem('gardenLibraryConfig', JSON.stringify(gardenConfig.value))
+    MessagePlugin.success('花园配置已保存')
+    showGardenLibraryDialog.value = false
+  } catch (e) {
+    MessagePlugin.error('保存失败，请重试')
+    console.error('保存花园配置失败:', e)
+  }
+}
+
+const resetToDefaultConfig = () => {
+  gardenConfig.value = { ...defaultGardenConfig }
+  MessagePlugin.success('已恢复默认配置')
+}
 
 // AI配置相关
 const openConfigDialog = () => {
@@ -467,46 +647,89 @@ const openConfigDialog = () => {
 <style scoped>
 .app-container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
+  background: linear-gradient(180deg, #FFF9F0 0%, #FFE8E1 50%, #E8F4F8 100%);
   padding: 20px;
   font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
 }
 
 .header {
-  text-align: center;
-  padding: 30px 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 20px;
+  padding: 35px 30px;
+  background: linear-gradient(135deg, #FF9A9E 0%, #FECFEF 50%, #FECFEF 100%);
+  border-radius: 25px;
   margin-bottom: 30px;
-  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 8px 25px rgba(255, 154, 158, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.header::before {
+  content: '';
+  position: absolute;
+  top: -50px;
+  right: -50px;
+  width: 150px;
+  height: 150px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.header::after {
+  content: '';
+  position: absolute;
+  bottom: -30px;
+  left: -30px;
+  width: 100px;
+  height: 100px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  pointer-events: none;
 }
 
 .header-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  position: relative;
+  z-index: 1;
 }
 
-.header-content > div:first-child {
+.header-text {
   flex: 1;
 }
 
 .title {
-  font-size: 2.5rem;
+  font-size: 2.2rem;
   color: white;
-  margin-bottom: 10px;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+  margin-bottom: 8px;
+  text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.1);
+  font-weight: 600;
+  letter-spacing: 1px;
 }
 
 .subtitle {
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 1rem;
+  font-weight: 400;
 }
 
 .header-actions {
-  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 15px;
 }
 
+.header-illustration {
+  flex-shrink: 0;
+  width: 80px;
+  height: 80px;
+}
+
+.garden-icon {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 4px 10px rgba(196, 77, 255, 0.3));
+}
 
 .main-content {
   max-width: 1200px;
@@ -519,10 +742,12 @@ const openConfigDialog = () => {
 }
 
 .record-card {
-  background: white;
-  border-radius: 20px;
-  padding: 30px;
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 24px;
+  padding: 35px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.8);
 }
 
 /* 心情选择器 */
@@ -532,46 +757,81 @@ const openConfigDialog = () => {
 
 .mood-selector h3 {
   margin-bottom: 20px;
-  color: #333;
+  color: #4A4A4A;
   font-size: 1.3rem;
+  font-weight: 500;
 }
 
 .mood-options {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-  gap: 15px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
 }
 
 .mood-option {
-  padding: 20px 10px;
-  border: 2px solid #e0e0e0;
-  border-radius: 15px;
+  padding: 18px 12px;
+  border: 2px solid #F0F0F0;
+  border-radius: 18px;
   text-align: center;
   cursor: pointer;
-  transition: all 0.3s ease;
-  background: #fafafa;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  background: white;
+  position: relative;
+  overflow: hidden;
+}
+
+.mood-option::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, #FFB8CA 0%, #FFD1DC 100%);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  z-index: 0;
 }
 
 .mood-option:hover {
-  border-color: #667eea;
-  transform: translateY(-3px);
-  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+  border-color: #FF9A9E;
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(255, 154, 158, 0.2);
+}
+
+.mood-option:hover::before {
+  opacity: 0.1;
 }
 
 .mood-option.selected {
-  border-color: #667eea;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  border-color: #FF9A9E;
+  background: linear-gradient(135deg, #FFF5F5 0%, #FFE8E8 100%);
+  transform: translateY(-3px);
+  box-shadow: 0 6px 18px rgba(255, 154, 158, 0.25);
 }
 
-.mood-emoji {
-  font-size: 2.5rem;
-  margin-bottom: 8px;
+.mood-option.selected::before {
+  opacity: 0.05;
+}
+
+.mood-illustration-container {
+  width: 70px;
+  height: 70px;
+  margin: 0 auto 10px;
+  position: relative;
+  z-index: 1;
 }
 
 .mood-label {
   font-size: 0.9rem;
   font-weight: 500;
+  color: #4A4A4A;
+  position: relative;
+  z-index: 1;
+}
+
+.mood-option.selected .mood-label {
+  color: #D63031;
 }
 
 /* 写日记模式 */
@@ -703,58 +963,77 @@ const openConfigDialog = () => {
 
 .garden-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   gap: 25px;
 }
 
 .flower-item {
-  background: white;
-  border-radius: 15px;
-  padding: 25px 15px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  padding: 20px 15px;
   text-align: center;
   cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  position: relative;
+  overflow: hidden;
+}
+
+.flower-item::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(135deg, #FFE4E1 0%, #FFE8E1 100%);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  transform: rotate(45deg);
 }
 
 .flower-item:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 12px 30px rgba(255, 154, 158, 0.15);
+}
+
+.flower-item:hover::before {
+  opacity: 0.5;
 }
 
 .flower {
-  font-size: 4rem;
-  margin-bottom: 10px;
-  animation: bloom 0.5s ease-out;
-}
-
-@keyframes bloom {
-  from {
-    transform: scale(0);
-    opacity: 0;
-  }
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
+  width: 90px;
+  height: 90px;
+  margin: 0 auto 12px;
+  position: relative;
+  z-index: 1;
 }
 
 .flower-date {
-  color: #666;
-  font-size: 0.9rem;
+  color: #7A7A7A;
+  font-size: 0.85rem;
+  position: relative;
+  z-index: 1;
+  font-weight: 400;
 }
 
 .empty-garden {
   text-align: center;
   padding: 80px 20px;
-  background: white;
-  border-radius: 20px;
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 24px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.8);
 }
 
 .empty-icon {
-  font-size: 5rem;
-  margin-bottom: 20px;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 20px;
+  opacity: 0.6;
 }
 
 .empty-garden p {
@@ -768,8 +1047,9 @@ const openConfigDialog = () => {
 }
 
 .detail-flower {
-  font-size: 5rem;
-  margin-bottom: 15px;
+  width: 120px;
+  height: 120px;
+  margin: 0 auto 20px;
 }
 
 .detail-date {
@@ -901,6 +1181,100 @@ const openConfigDialog = () => {
   white-space: pre-wrap;
 }
 
+/* 花园库配置弹窗 */
+.garden-config-dialog {
+  padding: 10px 0;
+}
+
+.config-header {
+  margin-bottom: 30px;
+}
+
+.config-tip {
+  color: #666;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin-bottom: 15px;
+}
+
+.config-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.mood-flower-mapping {
+  max-height: 500px;
+  overflow-y: auto;
+  margin-bottom: 25px;
+}
+
+.mapping-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #f9f9f9 0%, #ffffff 100%);
+  border-radius: 12px;
+  margin-bottom: 12px;
+  border: 1px solid #e0e0e0;
+  transition: all 0.3s ease;
+}
+
+.mapping-item:hover {
+  transform: translateX(5px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-color: #FF9A9E;
+}
+
+.mood-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mood-emoji {
+  font-size: 1.5rem;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #FFE8E1 0%, #FFF5F5 100%);
+  border-radius: 50%;
+}
+
+.mood-name {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: #333;
+}
+
+.flower-selector {
+  flex-shrink: 0;
+}
+
+.flower-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.flower-emoji {
+  font-size: 1.2rem;
+}
+
+.flower-name {
+  font-size: 0.95rem;
+}
+
+.config-footer {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  padding-top: 20px;
+  border-top: 1px solid #e0e0e0;
+}
+
 /* 响应式 */
 @media (max-width: 768px) {
   .header-content {
@@ -908,29 +1282,87 @@ const openConfigDialog = () => {
     text-align: center;
   }
 
-  .header-actions {
+  .header-illustration {
+    margin-left: 0;
     margin-top: 15px;
   }
 
   .title {
     font-size: 1.8rem;
   }
-  
+
   .subtitle {
     font-size: 0.95rem;
   }
-  
+
   .mood-options {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
   }
-  
+
+  .mood-illustration-container {
+    width: 55px;
+    height: 55px;
+  }
+
+  .mood-label {
+    font-size: 0.8rem;
+  }
+
   .garden-grid {
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
     gap: 15px;
+  }
+
+  .flower {
+    width: 70px;
+    height: 70px;
+  }
+
+  .detail-flower {
+    width: 90px;
+    height: 90px;
   }
 
   .info-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .header {
+    padding: 25px 20px;
+  }
+
+  .title {
+    font-size: 1.5rem;
+  }
+
+  .subtitle {
+    font-size: 0.85rem;
+  }
+
+  .mood-options {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .mood-option {
+    padding: 14px 10px;
+  }
+
+  .mood-illustration-container {
+    width: 50px;
+    height: 50px;
+  }
+
+  .mood-label {
+    font-size: 0.75rem;
+  }
+
+  .garden-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
   }
 }
 
