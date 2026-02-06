@@ -1,183 +1,186 @@
 <template>
   <div id="app" class="app-container">
+    <!-- 首页和3D花园视图 -->
+    <div class="main-view">
+      <!-- 3D花园视图 -->
+        <Garden3D v-if="currentView === 'garden-3d'" :records="moodRecords" @back="currentView = 'garden'" />
 
-    <!-- 3D花园视图 -->
-    <Garden3D v-if="currentView === 'garden-3d'" :records="moodRecords" @back="currentView = 'garden'" />
-
-    <!-- 普通视图 -->
-    <div v-if="currentView !== 'garden-3d'">
-    <div class="header">
-        <div class="header-content">
-          <div class="header-text">
-            <h1 class="title">心情花园</h1>
-            <p class="subtitle">记录每一份情绪，培育属于自己的心灵花园</p>
-          </div>
-          <div class="header-actions">
-            <t-button theme="light" variant="outline" size="small" @click="showGardenLibraryDialog = true">
-              🏡 花园库配置
-            </t-button>
-            <div class="header-illustration">
-              <svg class="garden-icon" viewBox="0 0 100 100">
-                <defs>
-                  <linearGradient id="flowerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" style="stop-color:#FF6B9D" />
-                    <stop offset="100%" style="stop-color:#C44DFF" />
-                  </linearGradient>
-                </defs>
-                <path d="M 50 20 Q 30 50 50 80 Q 70 50 50 20" fill="url(#flowerGradient)" opacity="0.8" />
-                <path d="M 50 20 Q 80 40 50 80 Q 20 40 50 20" fill="url(#flowerGradient)" opacity="0.7" />
-                <path d="M 30 35 Q 50 50 70 35" stroke="#FF6B9D" stroke-width="2" fill="none" opacity="0.5" />
-                <circle cx="50" cy="45" r="8" fill="#FFEAA7" opacity="0.6" />
-              </svg>
-            </div>
-          </div>
-        </div>
-    </div>
-
-    <div class="main-content">
-      <!-- 记录心情区域 -->
-      <div class="record-section" v-if="currentView === 'garden'">
-        <t-card class="record-card">
-          <div class="mood-selector">
-            <h3>今天的心情如何？</h3>
-            <div class="mood-options">
-              <div
-                v-for="mood in moods"
-                :key="mood.value"
-                class="mood-option"
-                :class="{ selected: selectedMood === mood.value }"
-                @click="selectedMood = mood.value"
-              >
-                <div class="mood-illustration-container">
-                  <MoodIllustration :mood="mood.value" />
+        <!-- 普通视图（首页） -->
+        <div v-if="currentView === 'garden'" class="home-view">
+          <div class="header">
+            <div class="header-content">
+              <div class="header-text">
+                <h1 class="title">心情花园</h1>
+                <p class="subtitle">记录每一份情绪，培育属于自己的心灵花园</p>
+              </div>
+              <div class="header-actions">
+                <t-button theme="light" variant="outline" size="small" @click="showGardenLibraryDialog = true">
+                  🏡 花园库配置
+                </t-button>
+                <div class="header-illustration">
+                  <svg class="garden-icon" viewBox="0 0 100 100">
+                    <defs>
+                      <linearGradient id="flowerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#FF6B9D" />
+                        <stop offset="100%" style="stop-color:#C44DFF" />
+                      </linearGradient>
+                    </defs>
+                    <path d="M 50 20 Q 30 50 50 80 Q 70 50 50 20" fill="url(#flowerGradient)" opacity="0.8" />
+                    <path d="M 50 20 Q 80 40 50 80 Q 20 40 50 20" fill="url(#flowerGradient)" opacity="0.7" />
+                    <path d="M 30 35 Q 50 50 70 35" stroke="#FF6B9D" stroke-width="2" fill="none" opacity="0.5" />
+                    <circle cx="50" cy="45" r="8" fill="#FFEAA7" opacity="0.6" />
+                  </svg>
                 </div>
-                <div class="mood-label">{{ mood.label }}</div>
               </div>
             </div>
           </div>
 
-          <!-- 直接写日记模式 -->
-          <div class="diary-mode" v-if="recordMode === 'write'">
-            <h3>写下今天的日记</h3>
-            <t-textarea
-              v-model="diaryContent"
-              placeholder="记录今天的想法、感受或发生的事情..."
-              :autosize="{ minRows: 6, maxRows: 12 }"
-              class="diary-textarea"
-            />
-          </div>
+          <div class="main-content">
+            <!-- 记录心情区域 -->
+            <div class="record-section">
+              <t-card class="record-card">
+                <div class="mood-selector">
+                  <h3>今天的心情如何？</h3>
+                  <div class="mood-options">
+                    <div
+                      v-for="mood in moods"
+                      :key="mood.value"
+                      class="mood-option"
+                      :class="{ selected: selectedMood === mood.value }"
+                      @click="selectedMood = mood.value"
+                    >
+                      <div class="mood-illustration-container">
+                        <MoodIllustration :mood="mood.value" />
+                      </div>
+                      <div class="mood-label">{{ mood.label }}</div>
+                    </div>
+                  </div>
+                </div>
 
-          <!-- AI对话模式 -->
-          <div class="ai-chat-mode" v-if="recordMode === 'chat'">
-            <h3>和AI聊聊天</h3>
-            <div class="chat-messages" ref="chatContainer">
-              <div
-                v-for="(msg, index) in chatMessages"
-                :key="index"
-                class="message"
-                :class="msg.role"
-              >
-                <div class="message-content">{{ msg.content }}</div>
+                <!-- 直接写日记模式 -->
+                <div class="diary-mode" v-if="recordMode === 'write'">
+                  <h3>写下今天的日记</h3>
+                  <t-textarea
+                    v-model="diaryContent"
+                    placeholder="记录今天的想法、感受或发生的事情..."
+                    :autosize="{ minRows: 6, maxRows: 12 }"
+                    class="diary-textarea"
+                  />
+                </div>
+
+                <!-- AI对话模式 -->
+                <div class="ai-chat-mode" v-if="recordMode === 'chat'">
+                  <h3>和AI聊聊天</h3>
+                  <div class="chat-messages" ref="chatContainer">
+                    <div
+                      v-for="(msg, index) in chatMessages"
+                      :key="index"
+                      class="message"
+                      :class="msg.role"
+                    >
+                      <div class="message-content">{{ msg.content }}</div>
+                    </div>
+                  </div>
+                  <div class="chat-input">
+                    <t-input
+                      v-model="chatInput"
+                      placeholder="和AI分享今天的心情..."
+                      @keypress.enter="sendChatMessage"
+                    />
+                    <t-button theme="primary" @click="sendChatMessage">发送</t-button>
+                  </div>
+                  <!-- 总结日记按钮 -->
+                  <div class="summary-section" v-if="chatMessages.length > 0">
+                    <t-button
+                      theme="success"
+                      variant="outline"
+                      :loading="isSummarizing"
+                      @click="summarizeDiary"
+                    >
+                      <template #icon>✨</template>
+                      总结日记
+                    </t-button>
+                  </div>
+                </div>
+
+                <!-- 模式切换 -->
+                <div class="mode-toggle">
+                  <t-button
+                    :variant="recordMode === 'write' ? 'base' : 'outline'"
+                    @click="recordMode = 'write'"
+                  >
+                    写日记
+                  </t-button>
+                  <t-button
+                    :variant="recordMode === 'chat' ? 'base' : 'outline'"
+                    @click="recordMode = 'chat'"
+                  >
+                    AI对话
+                  </t-button>
+                </div>
+
+                <!-- 保存按钮 -->
+                <div class="save-section">
+                  <t-button
+                    theme="success"
+                    size="large"
+                    :disabled="!canSave"
+                    :loading="aiService.isLoading.value"
+                    @click="saveMood"
+                  >
+                    在花园里种下一朵花
+                  </t-button>
+                  <t-button
+                    theme="primary"
+                    size="large"
+                    variant="outline"
+                    @click="currentView = 'garden-3d'"
+                  >
+                    进入3D花园
+                  </t-button>
+                </div>
+              </t-card>
+            </div>
+
+            <!-- 花园视图 -->
+            <div class="garden-section">
+              <div class="garden-title">
+                <h2>我的花园</h2>
+                <p class="flower-count">{{ moodRecords.length }} 朵花</p>
               </div>
-            </div>
-            <div class="chat-input">
-              <t-input
-                v-model="chatInput"
-                placeholder="和AI分享今天的心情..."
-                @keypress.enter="sendChatMessage"
-              />
-              <t-button theme="primary" @click="sendChatMessage">发送</t-button>
-            </div>
-            <!-- 总结日记按钮 -->
-            <div class="summary-section" v-if="chatMessages.length > 0">
               <t-button
-                theme="success"
+                theme="primary"
+                size="large"
                 variant="outline"
-                :loading="isSummarizing"
-                @click="summarizeDiary"
+                @click="currentView = 'garden-3d'"
+                v-if="moodRecords.length > 0"
               >
-                <template #icon>✨</template>
-                总结日记
+                查看3D花园世界
               </t-button>
+              <div class="garden-grid" v-if="moodRecords.length > 0" style="margin-top: 25px;">
+                <div
+                  v-for="(record, index) in moodRecords"
+                  :key="index"
+                  class="flower-item"
+                  @click="viewMoodDetail(record)"
+                >
+                  <div class="flower">
+                    <FlowerIllustration :mood="record.mood" />
+                  </div>
+                  <div class="flower-date">{{ formatDate(record.date) }}</div>
+                </div>
+              </div>
+              <div class="empty-garden" v-else>
+                <svg class="empty-icon" viewBox="0 0 100 100">
+                  <path d="M 50 20 Q 35 40 50 60 Q 65 40 50 20" fill="#81ECEC" opacity="0.6" />
+                  <path d="M 50 20 Q 65 40 50 60 Q 35 40 50 20" fill="#74B9FF" opacity="0.4" />
+                  <path d="M 50 65 Q 50 75 50 85" stroke="#81ECEC" stroke-width="2" fill="none" />
+                  <ellipse cx="50" cy="88" rx="6" ry="3" fill="#81ECEC" transform="rotate(-30 50 88)" opacity="0.5" />
+                </svg>
+                <p>花园还是空的，开始记录第一份心情吧</p>
+              </div>
             </div>
           </div>
-
-          <!-- 模式切换 -->
-          <div class="mode-toggle">
-            <t-button
-              :variant="recordMode === 'write' ? 'base' : 'outline'"
-              @click="recordMode = 'write'"
-            >
-              写日记
-            </t-button>
-            <t-button
-              :variant="recordMode === 'chat' ? 'base' : 'outline'"
-              @click="recordMode = 'chat'"
-            >
-              AI对话
-            </t-button>
-          </div>
-
-          <!-- 保存按钮 -->
-          <div class="save-section">
-            <t-button
-              theme="success"
-              size="large"
-              :disabled="!canSave"
-              :loading="aiService.isLoading.value"
-              @click="saveMood"
-            >
-              在花园里种下一朵花
-            </t-button>
-            <t-button
-              theme="primary"
-              size="large"
-              variant="outline"
-              @click="currentView = 'garden-3d'"
-            >
-              进入3D花园
-            </t-button>
-          </div>
-
-        </t-card>
-      </div>
-
-      <!-- 花园视图 -->
-      <div class="garden-section" v-if="currentView === 'garden'">
-        <div class="garden-title">
-          <h2>我的花园</h2>
-          <p class="flower-count">{{ moodRecords.length }} 朵花</p>
-        </div>
-        <t-button
-          theme="primary"
-          size="large"
-          variant="outline"
-          @click="currentView = 'garden-3d'"
-          v-if="moodRecords.length > 0"
-        >
-          查看3D花园世界
-        </t-button>
-        <div class="garden-grid" v-if="moodRecords.length > 0" style="margin-top: 25px;">
-          <div
-            v-for="(record, index) in moodRecords"
-            :key="index"
-            class="flower-item"
-            @click="viewMoodDetail(record)"
-          >
-            <div class="flower">
-              <FlowerIllustration :mood="record.mood" />
-            </div>
-            <div class="flower-date">{{ formatDate(record.date) }}</div>
-          </div>
-        </div>
-        <div class="empty-garden" v-else>
-          <svg class="empty-icon" viewBox="0 0 100 100">
-            <path d="M 50 20 Q 35 40 50 60 Q 65 40 50 20" fill="#81ECEC" opacity="0.6" />
-            <path d="M 50 20 Q 65 40 50 60 Q 35 40 50 20" fill="#74B9FF" opacity="0.4" />
-            <path d="M 50 65 Q 50 75 50 85" stroke="#81ECEC" stroke-width="2" fill="none" />
-            <ellipse cx="50" cy="88" rx="6" ry="3" fill="#81ECEC" transform="rotate(-30 50 88)" opacity="0.5" />
-          </svg>
-          <p>花园还是空的，开始记录第一份心情吧</p>
         </div>
       </div>
     </div>
@@ -223,14 +226,14 @@
       </div>
     </t-dialog>
 
-    <!-- 花园库配置弹窗 -->
-    <t-dialog
-      v-model:visible="showGardenLibraryDialog"
-      header="🏡 花园库配置"
-      width="800px"
-      :footer="false"
-    >
-      <div class="garden-config-dialog">
+      <!-- 花园库配置弹窗 -->
+      <t-dialog
+        v-model:visible="showGardenLibraryDialog"
+        header="🏡 花园库配置"
+        width="800px"
+        :footer="false"
+      >
+        <div class="garden-config-dialog">
         <div class="config-header">
           <p class="config-tip">自定义每种情绪对应的花朵类型，打造属于你的独特花园！</p>
           <div class="config-actions">
@@ -279,33 +282,31 @@
             取消
           </t-button>
         </div>
-      </div>
-    </t-dialog>
+        </div>
+      </t-dialog>
 
-    <!-- AI配置弹窗 -->
-    <t-dialog
-      v-model:visible="showConfigDialog"
-      header="AI服务已配置"
-      :confirm-btn="{
-        content: '我知道了',
-        theme: 'primary'
-      }"
-      @confirm="showConfigDialog = false"
-    >
-      <div class="config-dialog">
-        <div class="config-info">
-          <p class="info-text">AI服务已由系统预配置，您可以直接使用智能聊天功能，无需额外设置。</p>
-          <div class="current-status">
-            <span>当前使用：</span>
-            <span class="status-ok">
-              {{ aiService.getConfig().providerName }}
-            </span>
+      <!-- AI配置弹窗 -->
+      <t-dialog
+        v-model:visible="showConfigDialog"
+        header="AI服务已配置"
+        :confirm-btn="{
+          content: '我知道了',
+          theme: 'primary'
+        }"
+        @confirm="showConfigDialog = false"
+      >
+        <div class="config-dialog">
+          <div class="config-info">
+            <p class="info-text">AI服务已由系统预配置，您可以直接使用智能聊天功能，无需额外设置。</p>
+            <div class="current-status">
+              <span>当前使用：</span>
+              <span class="status-ok">
+                {{ aiService.getConfig().providerName }}
+              </span>
+            </div>
           </div>
         </div>
-      </div>
-    </t-dialog>
-    </div>
-  </div>
+      </t-dialog>
 </template>
 
 <script setup>
@@ -650,6 +651,86 @@ const openConfigDialog = () => {
   background: linear-gradient(180deg, #FFF9F0 0%, #FFE8E1 50%, #E8F4F8 100%);
   padding: 20px;
   font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
+/* 主视图 */
+.main-view {
+  animation: fadeIn 0.8s ease-out;
+  position: relative;
+  z-index: 1;
+}
+
+.home-view {
+  min-height: 100vh;
+}
+
+/* 主界面过渡动画 */
+.main-fade-enter-active {
+  transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.main-fade-enter-from {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+/* 动画关键帧 */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-15px);
+  }
+}
+
+@keyframes float-small {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(5deg);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+@keyframes pulse-dot {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.3);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .header {
