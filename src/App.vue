@@ -1,187 +1,329 @@
 <template>
-  <div id="app" class="app-container">
-    <!-- 首页和3D花园视图 -->
-    <div class="main-view">
+  <div class="app-container" @wheel="handleWheel" @touchmove="handleTouchMove" @mousemove="handleMouseMove">
+    <!-- 粒子背景 - 只在3D花园显示 -->
+    <ParticleBackground v-if="currentView === 'garden-3d'" />
+
+    <!-- 语言切换按钮 - 不在3D花园显示 -->
+    <button v-if="currentView !== 'garden-3d'" class="lang-switch" @click="toggleLanguage">
+      {{ currentLang === 'zh' ? 'EN' : '中文' }}
+    </button>
+
+    <!-- 浮动功能按钮区域 - 不在3D花园显示 -->
+    <div v-if="currentView !== 'garden-3d'" class="floating-actions">
+      <button class="action-btn" @click="showGardenLibraryDialog = true" :title="t('gardenLibraryTitle')">
+        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 7.5a4.5 4.5 0 1 1 4.5 4.5M12 7.5A4.5 4.5 0 1 0 7.5 12M12 7.5V9m-4.5 3a4.5 4.5 0 1 1 4.5 4.5m-4.5-4.5V12m9-4.5a4.5 4.5 0 1 1 4.5 4.5M12 16.5V18"/>
+          <circle cx="12" cy="7.5" r="1.5"/>
+          <circle cx="7.5" cy="12" r="1.5"/>
+          <circle cx="16.5" cy="12" r="1.5"/>
+          <circle cx="12" cy="16.5" r="1.5"/>
+        </svg>
+        <span class="btn-label">{{ t('gardenLibrary') }}</span>
+      </button>
+      <button class="action-btn" @click="currentView = 'garden-3d'" :title="t('garden3dTitle')">
+        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 9l9-7 9 7v11l-9-4-9 4z"/>
+        </svg>
+        <span class="btn-label">{{ t('garden3d') }}</span>
+      </button>
+      <button class="action-btn" @click="scrollToHistory" :title="t('myDiaryTitle')">
+        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+          <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+        </svg>
+        <span class="btn-label">{{ t('myDiary') }}</span>
+      </button>
+    </div>
+
+    <!-- 主内容区 - 使用固定容器实现无滚动切换 -->
+    <div class="main-content">
       <!-- 3D花园视图 -->
-        <Garden3D v-if="currentView === 'garden-3d'" :records="moodRecords" @back="currentView = 'garden'" />
+      <Garden3D v-if="currentView === 'garden-3d'" :records="moodRecords" :currentLang="currentLang" @back="currentView = 'garden'" />
 
-        <!-- 普通视图（首页） -->
-        <div v-if="currentView === 'garden'" class="home-view">
-          <div class="header">
-            <div class="header-content">
-              <div class="header-text">
-                <h1 class="title">心情花园</h1>
-                <p class="subtitle">记录每一份情绪，培育属于自己的心灵花园</p>
-              </div>
-              <div class="header-actions">
-                <t-button theme="light" variant="outline" size="small" @click="showGardenLibraryDialog = true">
-                  🏡 花园库配置
-                </t-button>
-                <div class="header-illustration">
-                  <svg class="garden-icon" viewBox="0 0 100 100">
-                    <defs>
-                      <linearGradient id="flowerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" style="stop-color:#FF6B9D" />
-                        <stop offset="100%" style="stop-color:#C44DFF" />
-                      </linearGradient>
-                    </defs>
-                    <path d="M 50 20 Q 30 50 50 80 Q 70 50 50 20" fill="url(#flowerGradient)" opacity="0.8" />
-                    <path d="M 50 20 Q 80 40 50 80 Q 20 40 50 20" fill="url(#flowerGradient)" opacity="0.7" />
-                    <path d="M 30 35 Q 50 50 70 35" stroke="#FF6B9D" stroke-width="2" fill="none" opacity="0.5" />
-                    <circle cx="50" cy="45" r="8" fill="#FFEAA7" opacity="0.6" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="main-content">
-            <!-- 记录心情区域 -->
-            <div class="record-section">
-              <t-card class="record-card">
-                <div class="mood-selector">
-                  <h3>今天的心情如何？</h3>
-                  <div class="mood-options">
-                    <div
-                      v-for="mood in moods"
-                      :key="mood.value"
-                      class="mood-option"
-                      :class="{ selected: selectedMood === mood.value }"
-                      @click="selectedMood = mood.value"
-                    >
-                      <div class="mood-illustration-container">
-                        <MoodIllustration :mood="mood.value" />
-                      </div>
-                      <div class="mood-label">{{ mood.label }}</div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- 直接写日记模式 -->
-                <div class="diary-mode" v-if="recordMode === 'write'">
-                  <h3>写下今天的日记</h3>
-                  <t-textarea
-                    v-model="diaryContent"
-                    placeholder="记录今天的想法、感受或发生的事情..."
-                    :autosize="{ minRows: 6, maxRows: 12 }"
-                    class="diary-textarea"
-                  />
-                </div>
-
-                <!-- AI对话模式 -->
-                <div class="ai-chat-mode" v-if="recordMode === 'chat'">
-                  <h3>和AI聊聊天</h3>
-                  <div class="chat-messages" ref="chatContainer">
-                    <div
-                      v-for="(msg, index) in chatMessages"
-                      :key="index"
-                      class="message"
-                      :class="msg.role"
-                    >
-                      <div class="message-content">{{ msg.content }}</div>
-                    </div>
-                  </div>
-                  <div class="chat-input">
-                    <t-input
-                      v-model="chatInput"
-                      placeholder="和AI分享今天的心情..."
-                      @keypress.enter="sendChatMessage"
-                    />
-                    <t-button theme="primary" @click="sendChatMessage">发送</t-button>
-                  </div>
-                  <!-- 总结日记按钮 -->
-                  <div class="summary-section" v-if="chatMessages.length > 0">
-                    <t-button
-                      theme="success"
-                      variant="outline"
-                      :loading="isSummarizing"
-                      @click="summarizeDiary"
-                    >
-                      <template #icon>✨</template>
-                      总结日记
-                    </t-button>
-                  </div>
-                </div>
-
-                <!-- 模式切换 -->
-                <div class="mode-toggle">
-                  <t-button
-                    :variant="recordMode === 'write' ? 'base' : 'outline'"
-                    @click="recordMode = 'write'"
-                  >
-                    写日记
-                  </t-button>
-                  <t-button
-                    :variant="recordMode === 'chat' ? 'base' : 'outline'"
-                    @click="recordMode = 'chat'"
-                  >
-                    AI对话
-                  </t-button>
-                </div>
-
-                <!-- 保存按钮 -->
-                <div class="save-section">
-                  <t-button
-                    theme="success"
-                    size="large"
-                    :disabled="!canSave"
-                    :loading="aiService.isLoading.value"
-                    @click="saveMood"
-                  >
-                    在花园里种下一朵花
-                  </t-button>
-                  <t-button
-                    theme="primary"
-                    size="large"
-                    variant="outline"
-                    @click="currentView = 'garden-3d'"
-                  >
-                    进入3D花园
-                  </t-button>
-                </div>
-              </t-card>
-            </div>
-
-            <!-- 花园视图 -->
-            <div class="garden-section">
-              <div class="garden-title">
-                <h2>我的花园</h2>
-                <p class="flower-count">{{ moodRecords.length }} 朵花</p>
-              </div>
-              <t-button
-                theme="primary"
-                size="large"
-                variant="outline"
-                @click="currentView = 'garden-3d'"
-                v-if="moodRecords.length > 0"
-              >
-                查看3D花园世界
-              </t-button>
-              <div class="garden-grid" v-if="moodRecords.length > 0" style="margin-top: 25px;">
-                <div
-                  v-for="(record, index) in moodRecords"
-                  :key="index"
-                  class="flower-item"
-                  @click="viewMoodDetail(record)"
-                >
-                  <div class="flower">
-                    <FlowerIllustration :mood="record.mood" />
-                  </div>
-                  <div class="flower-date">{{ formatDate(record.date) }}</div>
-                </div>
-              </div>
-              <div class="empty-garden" v-else>
-                <svg class="empty-icon" viewBox="0 0 100 100">
-                  <path d="M 50 20 Q 35 40 50 60 Q 65 40 50 20" fill="#81ECEC" opacity="0.6" />
-                  <path d="M 50 20 Q 65 40 50 60 Q 35 40 50 20" fill="#74B9FF" opacity="0.4" />
-                  <path d="M 50 65 Q 50 75 50 85" stroke="#81ECEC" stroke-width="2" fill="none" />
-                  <ellipse cx="50" cy="88" rx="6" ry="3" fill="#81ECEC" transform="rotate(-30 50 88)" opacity="0.5" />
-                </svg>
-                <p>花园还是空的，开始记录第一份心情吧</p>
-              </div>
-            </div>
-          </div>
+      <!-- 首页视图 - 固定全屏显示 -->
+      <div v-else class="home-view" :class="`season-${currentSeason}`">
+        <!-- 视频背景 -->
+        <VideoBackground
+          videoSrc="/videos/gradient-bg.mp4"
+        />
+        <!--
+        <div class="mood-flow-background">
+          <div class="flow-blob blob-1" :style="getBlobStyle(1)"></div>
+          <div class="flow-blob blob-2" :style="getBlobStyle(2)"></div>
+          <div class="flow-blob blob-3" :style="getBlobStyle(3)"></div>
+          <div class="flow-blob blob-4" :style="getBlobStyle(4)"></div>
+          <div class="flow-blob blob-5" :style="getBlobStyle(5)"></div>
+          <div class="flow-blob blob-6" :style="getBlobStyle(6)"></div>
         </div>
+        -->
+
+        <!-- 第1屏：英雄区域 - MoodGarden标题 -->
+        <section class="hero-section" :class="{ active: currentSection === 'hero' }">
+          <div class="hero-content">
+            <h1 class="hero-title" :class="{ 'title-visible': showTitle }">
+              {{ t('title') }}
+            </h1>
+            <p class="hero-subtitle" :class="{ 'subtitle-visible': showTitle }">
+              {{ t('heroSubtitle') }}
+            </p>
+            <div class="scroll-hint">
+              <span>{{ t('scrollToBegin') }}</span>
+              <svg class="scroll-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 5v14M19 12l-7 7-7-7"/>
+              </svg>
+            </div>
+          </div>
+        </section>
+
+        <!-- 第2屏：心情选择 -->
+        <section class="mood-selection-section" :class="{ active: currentSection === 'mood' }">
+          <div class="wave-guide">
+            <div class="wave"></div>
+          </div>
+          <div class="section-content">
+            <h2 class="section-title">
+              <span class="title-icon">✨</span>
+              {{ t('moodTitle') }}
+              <span class="title-icon">✨</span>
+            </h2>
+            <p class="section-subtitle">{{ t('moodSubtitle') }}</p>
+
+            <div class="mood-grid">
+              <div
+                v-for="mood in moodsI18n"
+                :key="mood.value"
+                class="mood-card"
+                :class="{ selected: selectedMood === mood.value }"
+                @click="selectMood(mood)"
+              >
+                <div class="mood-card-header">
+                  <div class="mood-emoji">{{ mood.emoji }}</div>
+                  <div class="mood-label">{{ mood.label }}</div>
+                </div>
+                <div class="mood-quote">{{ mood.quote }}</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 第3屏：日记/AI聊天 -->
+        <section class="journal-section" :class="{ active: currentSection === 'journal' }">
+          <div class="wave-guide">
+            <div class="wave"></div>
+          </div>
+          <div class="section-content">
+            <h2 class="section-title">
+              <span class="title-icon">🌸</span>
+              {{ t('journalTitle') }}
+              <span class="title-icon">🌸</span>
+            </h2>
+            <p class="section-subtitle">{{ t('journalSubtitle') }}</p>
+
+            <!-- 未选择心情提示 -->
+            <div v-if="!selectedMood" class="mood-reminder">
+              <div class="reminder-icon">💭</div>
+              <p class="reminder-text">{{ t('pleaseSelectMood') }}</p>
+              <button class="go-select-mood-btn" @click="currentSection = 'mood'">
+                {{ t('goSelectMood') }}
+              </button>
+            </div>
+
+            <!-- 已选择心情，显示写日记/AI聊天 -->
+            <template v-else>
+              <!-- 模式切换 -->
+              <div class="mode-tabs">
+                <button
+                  class="mode-tab"
+                  :class="{ active: recordMode === 'write' }"
+                  @click="recordMode = 'write'"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                  </svg>
+                  {{ t('writeDiary') }}
+                </button>
+                <button
+                  class="mode-tab"
+                  :class="{ active: recordMode === 'chat' }"
+                  @click="recordMode = 'chat'"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                  </svg>
+                  {{ t('aiChat') }}
+                </button>
+              </div>
+
+            <!-- 换个心情和日期按钮 -->
+            <div class="change-options">
+              <button class="change-mood-btn" @click="changeMood">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                  <path d="M3 3v5h5"/>
+                </svg>
+                {{ t('changeMood') }}
+              </button>
+              <button class="change-date-btn" @click="showDatePicker = true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                  <line x1="16" y1="2" x2="16" y2="6"/>
+                  <line x1="8" y1="2" x2="8" y2="6"/>
+                  <line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                {{ t('changeDate') }}
+              </button>
+            </div>
+
+            <!-- 日期选择器弹窗 -->
+            <t-dialog
+              v-model:visible="showDatePicker"
+              :header="t('selectDate')"
+              :footer="false"
+              width="400px"
+            >
+              <div class="date-picker-dialog">
+                <input
+                  type="date"
+                  v-model="selectedDate"
+                  class="date-input"
+                />
+                <div class="date-picker-actions">
+                  <t-button theme="primary" @click="confirmDate">
+                    {{ t('today') }}
+                  </t-button>
+                  <t-button theme="default" variant="outline" @click="showDatePicker = false">
+                    {{ t('confirmBtn') }}
+                  </t-button>
+                </div>
+              </div>
+            </t-dialog>
+
+              <!-- 写日记模式 -->
+              <div v-if="recordMode === 'write'" class="write-container">
+                <textarea
+                  v-model="diaryContent"
+                  class="diary-textarea"
+                  :placeholder="t('diaryPlaceholder')"
+                ></textarea>
+              </div>
+
+              <!-- AI聊天模式 -->
+              <div v-if="recordMode === 'chat'" class="chat-container">
+                <div class="chat-messages" ref="chatMessagesRef">
+                  <div
+                    v-for="(msg, index) in chatMessages"
+                    :key="index"
+                    class="message"
+                    :class="msg.role"
+                  >
+                    <div class="message-content">{{ msg.content }}</div>
+                  </div>
+                </div>
+                <div class="chat-input-wrapper">
+                  <input
+                    v-model="chatInput"
+                    class="chat-input"
+                    :placeholder="t('chatPlaceholder')"
+                    @keypress.enter="sendChatMessage"
+                  />
+                  <button class="send-btn" @click="sendChatMessage">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <line x1="22" y1="2" x2="11" y2="13"></line>
+                      <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                  </button>
+                </div>
+                <div class="chat-actions">
+                  <button
+                    v-if="chatMessages.length > 0"
+                    class="summarize-btn"
+                    @click="summarizeDiary"
+                  >
+                    ✨ {{ t('summarize') }}
+                  </button>
+                  <button
+                    v-if="chatMessages.length > 0"
+                    class="clear-chat-btn"
+                    @click="clearChatMessages"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M3 6h18"/>
+                      <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                      <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                    </svg>
+                    {{ t('clearChat') }}
+                  </button>
+                </div>
+              </div>
+
+              <!-- 种花按钮 -->
+              <button
+                class="plant-flower-btn"
+                :disabled="!canSave"
+                @click="plantFlower"
+              >
+                <span class="btn-icon">🌷</span>
+                {{ t('plantFlower') }}
+              </button>
+            </template>
+          </div>
+        </section>
+
+        <!-- 第4屏：历史花园 -->
+        <section class="history-section" :class="{ active: currentSection === 'history' }">
+          <!-- 返回首页按钮 -->
+          <button class="history-back-btn" @click="goBackToHome">
+            <svg class="back-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+            <span>{{ t('backToHome') }}</span>
+          </button>
+          <div class="section-content">
+            <h2 class="section-title">
+              <span class="title-icon">🌺</span>
+              {{ t('myDiary') }}
+              <span class="title-icon">🌺</span>
+            </h2>
+            <p class="flower-count">{{ t('flowerCount').replace('xx', moodRecords.length) }}</p>
+
+            <!-- 日期筛选 -->
+            <div class="date-filter">
+              <button
+                class="filter-btn"
+                :class="{ active: historyFilterDate === '' }"
+                @click="historyFilterDate = ''"
+              >
+                {{ t('allDates') }}
+              </button>
+              <input
+                type="date"
+                v-model="historyFilterDate"
+                class="filter-date-input"
+                :placeholder="t('filterByDate')"
+              />
+            </div>
+
+            <div v-if="filteredRecords.length > 0" class="garden-grid">
+              <div
+                v-for="(record, index) in filteredRecords"
+                :key="index"
+                class="flower-card"
+                @click="viewMoodDetail(record)"
+              >
+                <div class="flower-emoji">
+                  <FlowerIllustration :mood="record.mood" />
+                </div>
+                <div class="flower-date">{{ formatDate(record.date) }}</div>
+                <div class="flower-mood">{{ getMoodLabel(record.mood) }}</div>
+              </div>
+            </div>
+            <div v-else class="empty-garden">
+              <div class="empty-icon">🌱</div>
+              <p>{{ t('emptyGarden') }}</p>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
 
@@ -226,14 +368,14 @@
       </div>
     </t-dialog>
 
-      <!-- 花园库配置弹窗 -->
-      <t-dialog
-        v-model:visible="showGardenLibraryDialog"
-        header="🏡 花园库配置"
-        width="800px"
-        :footer="false"
-      >
-        <div class="garden-config-dialog">
+    <!-- 花园库配置弹窗 -->
+    <t-dialog
+      v-model:visible="showGardenLibraryDialog"
+      header="🏡 花园库配置"
+      width="800px"
+      :footer="false"
+    >
+      <div class="garden-config-dialog">
         <div class="config-header">
           <p class="config-tip">自定义每种情绪对应的花朵类型，打造属于你的独特花园！</p>
           <div class="config-actions">
@@ -282,31 +424,9 @@
             取消
           </t-button>
         </div>
-        </div>
-      </t-dialog>
-
-      <!-- AI配置弹窗 -->
-      <t-dialog
-        v-model:visible="showConfigDialog"
-        header="AI服务已配置"
-        :confirm-btn="{
-          content: '我知道了',
-          theme: 'primary'
-        }"
-        @confirm="showConfigDialog = false"
-      >
-        <div class="config-dialog">
-          <div class="config-info">
-            <p class="info-text">AI服务已由系统预配置，您可以直接使用智能聊天功能，无需额外设置。</p>
-            <div class="current-status">
-              <span>当前使用：</span>
-              <span class="status-ok">
-                {{ aiService.getConfig().providerName }}
-              </span>
-            </div>
-          </div>
-        </div>
-      </t-dialog>
+      </div>
+    </t-dialog>
+  </div>
 </template>
 
 <script setup>
@@ -316,17 +436,239 @@ import aiService from './services/aiService.js'
 import MoodIllustration from './components/MoodIllustration.vue'
 import FlowerIllustration from './components/FlowerIllustration.vue'
 import Garden3D from './components/Garden3D.vue'
+import ParticleBackground from './components/ParticleBackground.vue'
+import VideoBackground from './components/VideoBackground.vue'
 
-// 心情选项
+// 语言包
+const i18n = {
+  zh: {
+    title: '情绪花园',
+    gardenLibraryTitle: '配置花园中可用的花卉种类',
+    gardenLibrary: '花园库',
+    garden3dTitle: '进入3D花园，欣赏你的心情花园',
+    garden3d: '3D花园',
+    myDiaryTitle: '查看你的历史日记和心情记录',
+    myDiary: '我的日记',
+    heroSubtitle: '记录每一份情绪，培育属于自己的心灵花园',
+    scrollToBegin: '向下滚动开始',
+    moodTitle: '你今天感觉怎么样？',
+    moodSubtitle: '选择你现在的心情开始你的旅程',
+    journalTitle: '分享你的想法',
+    journalSubtitle: '写日记或与AI聊天',
+    writeDiary: '写日记',
+    aiChat: 'AI聊天',
+    diaryPlaceholder: '写下你的想法、感受或今天发生的事情...',
+    chatPlaceholder: '与AI分享你的心情...',
+    send: '发送',
+    summarize: '总结为日记',
+    plantFlower: '在花园里种下一朵花',
+    flowerCount: '你的花园里有xx朵花',
+    emptyGarden: '花园还是空的',
+    startJourney: '开始你的心情之旅吧',
+    backToHome: '返回首页',
+    changeMood: '换个心情',
+    pleaseSelectMood: '请先选择今天的心情，然后开始写日记或与AI聊天',
+    goSelectMood: '去选择心情',
+    clearChat: '清除聊天记录',
+    changeDate: '换个日期',
+    selectDate: '选择日期',
+    today: '今天',
+    filterByDate: '按日期筛选',
+    allDates: '所有日期'
+  },
+  en: {
+    title: 'MoodGarden',
+    gardenLibraryTitle: 'Configure flower types available in your garden',
+    gardenLibrary: 'Garden Library',
+    garden3dTitle: 'Enter the 3D garden and admire your mood garden',
+    garden3d: '3D Garden',
+    myDiaryTitle: 'View your historical diaries and mood records',
+    myDiary: 'My Diary',
+    heroSubtitle: 'Record every emotion, cultivate your own inner garden',
+    scrollToBegin: 'Scroll to Begin',
+    moodTitle: 'How are you feeling today?',
+    moodSubtitle: 'Select your current mood to start your journey',
+    journalTitle: 'Share Your Thoughts',
+    journalSubtitle: 'Write your diary or chat with AI',
+    writeDiary: 'Write Diary',
+    aiChat: 'AI Chat',
+    diaryPlaceholder: 'Write down your thoughts, feelings, or what happened today...',
+    chatPlaceholder: 'Share your mood with AI...',
+    send: 'Send',
+    summarize: 'Summarize to Diary',
+    plantFlower: 'Plant a Flower in the Garden',
+    flowerCount: 'There are xx flowers in your garden',
+    emptyGarden: 'Your garden is empty',
+    startJourney: 'Start your mood journey',
+    backToHome: 'Back to Home',
+    changeMood: 'Change Mood',
+    pleaseSelectMood: 'Please select your mood first, then start writing or chatting',
+    goSelectMood: 'Go Select Mood',
+    clearChat: 'Clear Chat',
+    changeDate: 'Change Date',
+    selectDate: 'Select Date',
+    today: 'Today',
+    filterByDate: 'Filter by Date',
+    allDates: 'All Dates'
+  }
+}
+
+// 心情选项（带治愈文艺描述）
 const moods = [
-  { value: 'happy', label: '开心', emoji: '😊', flower: '🌻' },
-  { value: 'sad', label: '难过', emoji: '😢', flower: '🌧️' },
-  { value: 'angry', label: '生气', emoji: '😤', flower: '🌹' },
-  { value: 'calm', label: '平静', emoji: '😌', flower: '🌿' },
-  { value: 'excited', label: '兴奋', emoji: '🤩', flower: '🌸' },
-  { value: 'tired', label: '疲惫', emoji: '😴', flower: '🥀' },
-  { value: 'anxious', label: '焦虑', emoji: '😰', flower: '🍂' },
-  { value: 'hopeful', label: '充满希望', emoji: '🌟', flower: '🌺' }
+  {
+    value: 'happy',
+    label_zh: '开心',
+    label_en: 'Happy',
+    emoji: '😊',
+    quote_zh: '一个充满喜悦的日子就这样生长在我的生命中',
+    quote_en: 'A joyful day grows in my life like sunshine',
+    flower: '🌻'
+  },
+  {
+    value: 'sad',
+    label_zh: '难过',
+    label_en: 'Sad',
+    emoji: '😢',
+    quote_zh: '即使雨水也能滋润心灵的花园',
+    quote_en: 'Even rain waters the garden of the soul',
+    flower: '🌧️'
+  },
+  {
+    value: 'angry',
+    label_zh: '生气',
+    label_en: 'Angry',
+    emoji: '😤',
+    quote_zh: '烈火炼真金，挑战使我们更强大',
+    quote_en: 'Fire tempers steel, challenges strengthen us',
+    flower: '🌹'
+  },
+  {
+    value: 'calm',
+    label_zh: '平静',
+    label_en: 'Calm',
+    emoji: '😌',
+    quote_zh: '在宁静中，我找到了真正的自己',
+    quote_en: 'In stillness, I find my true self',
+    flower: '🌿'
+  },
+  {
+    value: 'excited',
+    label_zh: '兴奋',
+    label_en: 'Excited',
+    emoji: '🤩',
+    quote_zh: '兴奋如春日野花般绽放',
+    quote_en: 'Excitement blooms like wildflowers in spring',
+    flower: '🌸'
+  },
+  {
+    value: 'tired',
+    label_zh: '疲惫',
+    label_en: 'Tired',
+    emoji: '😴',
+    quote_zh: '休息并非无所事事，而是在积蓄力量',
+    quote_en: 'Rest is not idleness, it\'s gathering strength',
+    flower: '🥀'
+  },
+  {
+    value: 'anxious',
+    label_zh: '焦虑',
+    label_en: 'Anxious',
+    emoji: '😰',
+    quote_zh: '焦虑只是兴奋得忘了呼吸',
+    quote_en: 'Anxiety is just excitement without breath',
+    flower: '🍂'
+  },
+  {
+    value: 'hopeful',
+    label_zh: '充满希望',
+    label_en: 'Hopeful',
+    emoji: '🌟',
+    quote_zh: '希望是花园永恒的阳光',
+    quote_en: 'Hope is the garden\'s eternal sunlight',
+    flower: '🌺'
+  }
+]
+
+// 当前语言
+const currentLang = ref('zh')
+
+// 语言切换
+const toggleLanguage = () => {
+  currentLang.value = currentLang.value === 'zh' ? 'en' : 'zh'
+}
+
+// 翻译函数
+const t = (key) => {
+  return i18n[currentLang.value][key] || key
+}
+
+// 计算属性：获取当前语言的心情列表
+const moodsI18n = computed(() => {
+  return moods.map(mood => ({
+    ...mood,
+    label: currentLang.value === 'zh' ? mood.label_zh : mood.label_en,
+    quote: currentLang.value === 'zh' ? mood.quote_zh : mood.quote_en
+  }))
+})
+
+// 心情选项（带治愈文艺描述）
+const moods_original = [
+  { 
+    value: 'happy', 
+    label: '开心', 
+    emoji: '😊', 
+    quote: 'A joyful day grows in my life like sunshine',
+    flower: '🌻' 
+  },
+  { 
+    value: 'sad', 
+    label: '难过', 
+    emoji: '😢', 
+    quote: 'Even rain waters the garden of the soul',
+    flower: '🌧️' 
+  },
+  { 
+    value: 'angry', 
+    label: '生气', 
+    emoji: '😤', 
+    quote: 'Fire tempers the steel, challenges strengthen us',
+    flower: '🌹' 
+  },
+  { 
+    value: 'calm', 
+    label: '平静', 
+    emoji: '😌', 
+    quote: 'In stillness, I find my true self',
+    flower: '🌿' 
+  },
+  { 
+    value: 'excited', 
+    label: '兴奋', 
+    emoji: '🤩', 
+    quote: 'Excitement blooms like wildflowers in spring',
+    flower: '🌸' 
+  },
+  {
+    value: 'tired',
+    label: '疲惫',
+    emoji: '😴',
+    quote: 'Rest is not idleness, it\'s gathering strength',
+    flower: '🥀'
+  },
+  { 
+    value: 'anxious', 
+    label: '焦虑', 
+    emoji: '😰', 
+    quote: 'Anxiety is just excitement without breath',
+    flower: '🍂' 
+  },
+  {
+    value: 'hopeful',
+    label: '充满希望',
+    emoji: '🌟',
+    quote: 'Hope is the garden\'s eternal sunlight',
+    flower: '🌺'
+  }
 ]
 
 // 可用的花卉模型列表
@@ -347,14 +689,14 @@ const availableFlowers = [
 
 // 默认花园配置
 const defaultGardenConfig = {
-  happy: 'sunflower向日葵.glb', // 开心 - 向日葵
-  sad: 'daisy小雏菊.glb', // 难过 - 小雏菊
-  angry: 'rose_red红玫瑰.glb', // 生气 - 红玫瑰
-  calm: 'Lavender薰衣草.glb', // 平静 - 薰衣草
-  excited: 'daffodils黄水仙.glb', // 兴奋 - 黄水仙
-  tired: 'pinkrose粉玫瑰.glb', // 疲惫 - 粉玫瑰
-  anxious: 'dandelion蒲公英.glb', // 焦虑 - 蒲公英
-  hopeful: 'Blue Daze蓝星花.glb' // 充满希望 - 蓝星花
+  happy: 'sunflower向日葵.glb',
+  sad: 'daisy小雏菊.glb',
+  angry: 'rose_red红玫瑰.glb',
+  calm: 'Lavender薰衣草.glb',
+  excited: 'daffodils黄水仙.glb',
+  tired: 'pinkrose粉玫瑰.glb',
+  anxious: 'dandelion蒲公英.glb',
+  hopeful: 'Blue Daze蓝星花.glb'
 }
 
 // 状态管理
@@ -364,47 +706,229 @@ const selectedMood = ref('')
 const diaryContent = ref('')
 const chatInput = ref('')
 const chatMessages = ref([])
-const chatContainer = ref(null)
+const chatMessagesRef = ref(null)
 const moodRecords = ref([])
 const showDetailDialog = ref(false)
 const selectedRecord = ref(null)
-const showConfigDialog = ref(false)
-const isAIResponseLoading = ref(false)
+const showGardenLibraryDialog = ref(false)
+const gardenConfig = ref({ ...defaultGardenConfig })
 const isSummarizing = ref(false)
 const generatedDiary = ref('')
-const showGardenLibraryDialog = ref(false) // 花园库配置弹窗
-const gardenConfig = ref({ ...defaultGardenConfig }) // 当前花园配置
+const selectedDate = ref(new Date().toISOString().split('T')[0])
+const showDatePicker = ref(false)
+const historyFilterDate = ref('')
+
+// 当前显示的区块
+const currentSection = ref('hero')
+const showTitle = ref(false)
+let isScrolling = false
+
+// 当前季节状态
+const currentSeason = ref('spring')
+
+// 鼠标追踪
+const mouseX = ref(0)
+const mouseY = ref(0)
+const isMouseActive = ref(false)
+
+// 四季配色方案 - 柔和幻想花园风格
+const seasonColorSchemes = {
+  spring: {
+    background: 'linear-gradient(135deg, #FFF5F5 0%, #F0FFF4 50%, #E6FFFA 100%)',
+    blobs: [
+      { gradient: 'linear-gradient(135deg, rgba(255, 182, 193, 0.4) 0%, rgba(255, 218, 185, 0.35) 100%)', size: 500, x: 15, y: 15 },
+      { gradient: 'linear-gradient(135deg, rgba(144, 238, 144, 0.35) 0%, rgba(152, 251, 152, 0.3) 100%)', size: 450, x: 75, y: 65 },
+      { gradient: 'linear-gradient(135deg, rgba(255, 218, 185, 0.3) 0%, rgba(255, 182, 193, 0.25) 100%)', size: 400, x: 40, y: 80 },
+      { gradient: 'linear-gradient(135deg, rgba(230, 255, 250, 0.35) 0%, rgba(144, 238, 144, 0.3) 100%)', size: 480, x: 20, y: 70 },
+      { gradient: 'linear-gradient(135deg, rgba(255, 182, 193, 0.3) 0%, rgba(230, 255, 250, 0.25) 100%)', size: 420, x: 65, y: 25 },
+      { gradient: 'linear-gradient(135deg, rgba(144, 238, 144, 0.3) 0%, rgba(255, 218, 185, 0.25) 100%)', size: 380, x: 50, y: 50 }
+    ]
+  },
+  summer: {
+    background: 'linear-gradient(135deg, #FFFEF0 0%, #FFF5E6 50%, #FFF0F5 100%)',
+    blobs: [
+      { gradient: 'linear-gradient(135deg, rgba(255, 215, 0, 0.25) 0%, rgba(255, 165, 0, 0.2) 100%)', size: 520, x: 12, y: 18 },
+      { gradient: 'linear-gradient(135deg, rgba(50, 205, 50, 0.3) 0%, rgba(34, 139, 34, 0.25) 100%)', size: 460, x: 78, y: 62 },
+      { gradient: 'linear-gradient(135deg, rgba(255, 165, 0, 0.25) 0%, rgba(255, 99, 71, 0.2) 100%)', size: 440, x: 42, y: 78 },
+      { gradient: 'linear-gradient(135deg, rgba(50, 205, 50, 0.28) 0%, rgba(255, 215, 0, 0.22) 100%)', size: 500, x: 18, y: 72 },
+      { gradient: 'linear-gradient(135deg, rgba(255, 99, 71, 0.22) 0%, rgba(50, 205, 50, 0.18) 100%)', size: 430, x: 70, y: 22 },
+      { gradient: 'linear-gradient(135deg, rgba(255, 215, 0, 0.23) 0%, rgba(255, 165, 0, 0.19) 100%)', size: 400, x: 55, y: 55 }
+    ]
+  },
+  autumn: {
+    background: 'linear-gradient(135deg, #FFF8F0 0%, #FFFAF0 50%, #FFFBF0 100%)',
+    blobs: [
+      { gradient: 'linear-gradient(135deg, rgba(255, 140, 0, 0.28) 0%, rgba(210, 105, 30, 0.22) 100%)', size: 490, x: 14, y: 16 },
+      { gradient: 'linear-gradient(135deg, rgba(218, 165, 32, 0.25) 0%, rgba(184, 134, 11, 0.2) 100%)', size: 450, x: 76, y: 64 },
+      { gradient: 'linear-gradient(135deg, rgba(255, 99, 71, 0.24) 0%, rgba(205, 133, 63, 0.19) 100%)', size: 420, x: 44, y: 76 },
+      { gradient: 'linear-gradient(135deg, rgba(210, 105, 30, 0.26) 0%, rgba(218, 165, 32, 0.21) 100%)', size: 470, x: 16, y: 74 },
+      { gradient: 'linear-gradient(135deg, rgba(205, 133, 63, 0.21) 0%, rgba(255, 140, 0, 0.17) 100%)', size: 410, x: 72, y: 24 },
+      { gradient: 'linear-gradient(135deg, rgba(218, 165, 32, 0.23) 0%, rgba(255, 99, 71, 0.18) 100%)', size: 390, x: 56, y: 52 }
+    ]
+  },
+  winter: {
+    background: 'linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 50%, #E2E8F0 100%)',
+    blobs: [
+      { gradient: 'linear-gradient(135deg, rgba(173, 216, 230, 0.32) 0%, rgba(176, 196, 222, 0.26) 100%)', size: 510, x: 13, y: 17 },
+      { gradient: 'linear-gradient(135deg, rgba(230, 230, 250, 0.28) 0%, rgba(224, 255, 255, 0.22) 100%)', size: 470, x: 77, y: 63 },
+      { gradient: 'linear-gradient(135deg, rgba(176, 196, 222, 0.26) 0%, rgba(216, 191, 216, 0.2) 100%)', size: 440, x: 43, y: 77 },
+      { gradient: 'linear-gradient(135deg, rgba(173, 216, 230, 0.3) 0%, rgba(230, 230, 250, 0.24) 100%)', size: 490, x: 17, y: 73 },
+      { gradient: 'linear-gradient(135deg, rgba(216, 191, 216, 0.22) 0%, rgba(224, 255, 255, 0.18) 100%)', size: 430, x: 71, y: 23 },
+      { gradient: 'linear-gradient(135deg, rgba(230, 230, 250, 0.24) 0%, rgba(173, 216, 230, 0.19) 100%)', size: 410, x: 54, y: 54 }
+    ]
+  }
+}
+
+// 季节自动切换
+const switchSeason = () => {
+  const seasons = ['spring', 'summer', 'autumn', 'winter']
+  const currentIndex = seasons.indexOf(currentSeason.value)
+  currentSeason.value = seasons[(currentIndex + 1) % seasons.length]
+}
+
+// 每分钟自动切换季节
+setInterval(switchSeason, 60000)
+
+// 获取色块样式
+const getBlobStyle = (blobIndex) => {
+  const scheme = seasonColorSchemes[currentSeason.value]
+  const blob = scheme.blobs[blobIndex - 1]
+
+  if (!blob) return {}
+
+  // 计算鼠标影响
+  let offsetX = 0
+  let offsetY = 0
+
+  if (isMouseActive.value) {
+    const screenCenterX = window.innerWidth / 2
+    const screenCenterY = window.innerHeight / 2
+    offsetX = (mouseX.value - screenCenterX) * 0.05
+    offsetY = (mouseY.value - screenCenterY) * 0.05
+  }
+
+  return {
+    width: `${blob.size}px`,
+    height: `${blob.size}px`,
+    background: blob.gradient,
+    left: `calc(${blob.x}% + ${offsetX}px)`,
+    top: `calc(${blob.y}% + ${offsetY}px)`
+  }
+}
+
+// 鼠标移动处理
+const handleMouseMove = (e) => {
+  if (currentView.value === 'garden-3d') return
+
+  mouseX.value = e.clientX
+  mouseY.value = e.clientY
+  isMouseActive.value = true
+
+  // 3秒后标记鼠标不活跃
+  clearTimeout(window.mouseActiveTimeout)
+  window.mouseActiveTimeout = setTimeout(() => {
+    isMouseActive.value = false
+  }, 3000)
+}
+
+// 滚轮事件处理 - 固定位置切换（添加防抖）
+let wheelTimeout = null
+let wheelAccumulator = 0
+const handleWheel = (e) => {
+  if (currentView.value !== 'garden' || isScrolling) {
+    e.preventDefault()
+    return
+  }
+
+  // 累积滚动距离
+  wheelAccumulator += Math.abs(e.deltaY)
+
+  // 防抖处理，避免频繁触发
+  if (wheelTimeout) return
+
+  // 需要更大的滚动距离才触发页面切换
+  const SCROLL_THRESHOLD = 120
+
+  if (wheelAccumulator >= SCROLL_THRESHOLD) {
+    isScrolling = true
+    wheelAccumulator = 0
+
+    if (e.deltaY > 0) {
+      // 向下滚动
+      if (currentSection.value === 'hero') {
+        currentSection.value = 'mood'
+      } else if (currentSection.value === 'mood' && selectedMood.value) {
+        // 只有选择心情后才能进入日记界面
+        currentSection.value = 'journal'
+      }
+      // 不允许通过滚动从日记界面进入历史界面
+    } else if (e.deltaY < 0) {
+      // 向上滚动
+      // 不允许通过滚动从日记界面返回到心情选择界面
+      if (currentSection.value === 'mood') {
+        currentSection.value = 'hero'
+      }
+    }
+
+    // 设置防抖，减少滚动延迟
+    wheelTimeout = setTimeout(() => {
+      isScrolling = false
+      wheelTimeout = null
+    }, 500)
+  }
+}
+
+// 触摸事件处理（添加防抖）
+let touchTimeout = null
+const handleTouchMove = (e) => {
+  if (currentView.value !== 'garden') {
+    e.preventDefault()
+    return
+  }
+
+  // 防抖处理
+  if (touchTimeout) return
+
+  const touch = e.touches[0]
+  const startY = e.startY || touch.clientY
+
+  // 增加滑动阈值，从50px改为120px
+  const TOUCH_THRESHOLD = 120
+
+  let changed = false
+  if (touch.clientY - startY < -TOUCH_THRESHOLD && currentSection.value === 'hero') {
+    currentSection.value = 'mood'
+    changed = true
+  } else if (touch.clientY - startY < -TOUCH_THRESHOLD && currentSection.value === 'mood' && selectedMood.value) {
+    // 只有选择心情后才能进入日记界面
+    currentSection.value = 'journal'
+    changed = true
+  }
+  // 不允许通过滑动从日记界面进入历史界面或返回心情界面
+  else if (touch.clientY - startY > TOUCH_THRESHOLD && currentSection.value === 'mood') {
+    currentSection.value = 'hero'
+    changed = true
+  }
+
+  e.startY = touch.clientY
+
+  // 如果有变化，设置防抖
+  if (changed) {
+    touchTimeout = setTimeout(() => {
+      touchTimeout = null
+    }, 400)
+  }
+}
 
 // 计算属性
 const canSave = computed(() => {
   return selectedMood.value && (diaryContent.value.trim() || chatMessages.value.length > 0)
 })
 
-// 查看生成结果
-const showDiaryResult = () => {
-  DialogPlugin.confirm({
-    header: '生成的日记',
-    body: () => {
-      return `<div class="diary-result">${generatedDiary.value}</div>`
-    },
-    confirmBtn: '保存到花园',
-    cancelBtn: '再编辑一下',
-    onConfirm: () => {
-      diaryContent.value = generatedDiary.value
-      recordMode.value = 'write'
-    },
-    onCancel: () => {
-      diaryContent.value = generatedDiary.value
-      recordMode.value = 'write'
-    }
-  })
-}
-
 // 发送聊天消息
 const sendChatMessage = async () => {
   if (!chatInput.value.trim()) return
 
-  // 添加用户消息
   chatMessages.value.push({
     role: 'user',
     content: chatInput.value
@@ -413,15 +937,13 @@ const sendChatMessage = async () => {
   const userInput = chatInput.value
   chatInput.value = ''
 
-  // 滚动到底部
   nextTick(() => {
-    if (chatContainer.value) {
-      chatContainer.value.scrollTop = chatContainer.value.scrollHeight
+    if (chatMessagesRef.value) {
+      chatMessagesRef.value.scrollTop = chatMessagesRef.value.scrollHeight
     }
   })
 
   try {
-    isAIResponseLoading.value = true
     const aiResponse = await aiService.generateAIResponse(
       chatMessages.value,
       selectedMood.value || 'calm'
@@ -432,22 +954,142 @@ const sendChatMessage = async () => {
       content: aiResponse
     })
 
-    // 滚动到底部
     nextTick(() => {
-      if (chatContainer.value) {
-        chatContainer.value.scrollTop = chatContainer.value.scrollHeight
+      if (chatMessagesRef.value) {
+        chatMessagesRef.value.scrollTop = chatMessagesRef.value.scrollHeight
       }
     })
   } catch (err) {
     console.error('发送消息错误:', err)
     MessagePlugin.error(err.message || 'AI回复失败，请重试')
-  } finally {
-    isAIResponseLoading.value = false
   }
 }
 
-// 保存心情
-const saveMood = async () => {
+// 总结日记
+const summarizeDiary = async () => {
+  if (!selectedMood.value) {
+    MessagePlugin.warning('请先选择今天的心情')
+    return
+  }
+
+  try {
+    isSummarizing.value = true
+    MessagePlugin.loading('正在生成日记，让灵感绽放...')
+    generatedDiary.value = await aiService.generateAISummary(
+      chatMessages.value,
+      selectedMood.value || 'calm'
+    )
+    MessagePlugin.success('日记生成成功！')
+
+    DialogPlugin.confirm({
+      header: '📝 生成的日记',
+      body: generatedDiary.value,
+      confirmBtn: '保存到花园',
+      theme: 'primary',
+      confirmBtnTheme: {
+        variant: 'base',
+        theme: 'warning'
+      },
+      cancelBtn: '重新生成',
+      onConfirm: () => {
+        diaryContent.value = generatedDiary.value
+        recordMode.value = 'write'
+      },
+      onCancel: () => {
+        summarizeDiary()
+      }
+    })
+  } catch (err) {
+    console.error('生成日记失败:', err)
+    // 如果AI API不可用，使用默认日记模板
+    const defaultDiary = aiService.generateDefaultSummary(chatMessages.value, selectedMood.value || 'calm')
+    MessagePlugin.info('AI服务不可用，使用默认日记模板')
+
+    DialogPlugin.confirm({
+      header: '📝 日记',
+      body: defaultDiary,
+      confirmBtn: '保存到花园',
+      theme: 'primary',
+      confirmBtnTheme: {
+        variant: 'base',
+        theme: 'warning'
+      },
+      cancelBtn: '取消',
+      onConfirm: () => {
+        diaryContent.value = defaultDiary
+        recordMode.value = 'write'
+      }
+    })
+  } finally {
+    isSummarizing.value = false
+  }
+}
+
+// 选择心情
+const selectMood = (mood) => {
+  selectedMood.value = mood.value
+  // 自动跳转到日记界面
+  nextTick(() => {
+    currentSection.value = 'journal'
+  })
+}
+
+// 换个心情
+const changeMood = () => {
+  selectedMood.value = ''
+  currentSection.value = 'mood'
+}
+
+// 清除聊天记录
+const clearChatMessages = () => {
+  chatMessages.value = []
+}
+
+// 确认日期（设为今天）
+const confirmDate = () => {
+  selectedDate.value = new Date().toISOString().split('T')[0]
+  showDatePicker.value = false
+}
+
+// 格式化日期用于比较
+const formatDateForKey = (dateStr) => {
+  const date = new Date(dateStr)
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
+
+// 计算属性：根据日期筛选后的记录
+const filteredRecords = computed(() => {
+  if (!historyFilterDate.value) {
+    return moodRecords.value
+  }
+  return moodRecords.value.filter(record => {
+    const recordDate = formatDateForKey(record.date)
+    return recordDate === historyFilterDate.value
+  })
+})
+
+// 滚动到下一部分
+const scrollToNextSection = () => {
+  if (currentSection.value === 'mood') {
+    currentSection.value = 'journal'
+  }
+}
+
+// 滚动到历史
+const scrollToHistory = () => {
+  currentView.value = 'garden'
+  currentSection.value = 'history'
+  isScrolling = false // 重置滚动状态
+}
+
+// 返回首页
+const goBackToHome = () => {
+  currentView.value = 'garden'
+  currentSection.value = 'hero'
+}
+
+// 种花
+const plantFlower = async () => {
   if (!canSave.value) return
 
   try {
@@ -456,15 +1098,22 @@ const saveMood = async () => {
     if (recordMode.value === 'write') {
       diaryContentToSave = diaryContent.value
     } else {
-      // 如果是AI对话模式，生成总结
       MessagePlugin.loading('正在生成日记总结...')
-      diaryContentToSave = await generateAISummary()
+      diaryContentToSave = await aiService.generateAISummary(
+        chatMessages.value,
+        selectedMood.value || 'calm'
+      )
     }
+
+    // 使用选择的日期，如果没有选择则使用今天
+    const recordDate = selectedDate.value
+      ? new Date(selectedDate.value + 'T12:00:00').toISOString()
+      : new Date().toISOString()
 
     const record = {
       id: Date.now(),
       mood: selectedMood.value,
-      date: new Date().toISOString(),
+      date: recordDate,
       diary: diaryContentToSave,
       chatHistory: recordMode.value === 'chat' ? [...chatMessages.value] : null,
       mode: recordMode.value
@@ -473,7 +1122,6 @@ const saveMood = async () => {
     moodRecords.value.unshift(record)
     saveToLocalStorage()
 
-    // 重置表单（只重置内容，保留心情选择，允许重复记录）
     diaryContent.value = ''
     chatMessages.value = []
     generatedDiary.value = ''
@@ -490,62 +1138,6 @@ const saveMood = async () => {
   }
 }
 
-// AI总结日记
-const generateAISummary = async () => {
-  try {
-    const summary = await aiService.generateAISummary(
-      chatMessages.value,
-      selectedMood.value || 'calm'
-    )
-    return summary
-  } catch (err) {
-    console.log('使用默认总结:', err.message)
-    return aiService.generateDefaultSummary(chatMessages.value, selectedMood.value || 'calm')
-  }
-}
-
-// 总结日记
-const summarizeDiary = async () => {
-  if (!selectedMood.value) {
-    MessagePlugin.warning('请先选择今天的心情')
-    return
-  }
-
-  try {
-    isSummarizing.value = true
-    MessagePlugin.loading('正在生成日记，让灵感绽放...')
-    generatedDiary.value = await generateAISummary()
-    MessagePlugin.success('日记生成成功！')
-
-    // 显示生成的日记
-    DialogPlugin.confirm({
-      header: '📝 生成的日记',
-      body: () => {
-        return `<div class="diary-result">${generatedDiary.value.replace(/\n/g, '<br>')}</div>`
-      },
-      confirmBtn: '保存到花园',
-      cancelBtn: '重新生成',
-      onConfirm: () => {
-        diaryContent.value = generatedDiary.value
-        recordMode.value = 'write'
-      },
-      onCancel: () => {
-        summarizeDiary()
-      }
-    })
-  } catch (err) {
-    MessagePlugin.error('生成日记失败，请重试')
-  } finally {
-    isSummarizing.value = false
-  }
-}
-
-// 获取花朵
-const getFlower = (mood) => {
-  const moodConfig = moods.find(m => m.value === mood)
-  return moodConfig ? moodConfig.flower : '🌷'
-}
-
 // 获取心情标签
 const getMoodLabel = (mood) => {
   const moodConfig = moods.find(m => m.value === mood)
@@ -560,7 +1152,6 @@ const formatDate = (dateStr) => {
   return `${month}/${day}`
 }
 
-// 格式化详细日期
 const formatDetailDate = (dateStr) => {
   const date = new Date(dateStr)
   return date.toLocaleString('zh-CN', {
@@ -604,13 +1195,7 @@ const loadFromLocalStorage = () => {
   }
 }
 
-// 生命周期
-onMounted(() => {
-  loadFromLocalStorage()
-  loadGardenConfig()
-})
-
-// 花园库配置相关
+// 花园库配置
 const loadGardenConfig = () => {
   try {
     const savedConfig = localStorage.getItem('gardenLibraryConfig')
@@ -638,85 +1223,1645 @@ const resetToDefaultConfig = () => {
   MessagePlugin.success('已恢复默认配置')
 }
 
-// AI配置相关
-const openConfigDialog = () => {
-  showConfigDialog.value = true
-}
-
+onMounted(() => {
+  loadFromLocalStorage()
+  loadGardenConfig()
+  // 延迟显示标题，确保动画效果
+  setTimeout(() => {
+    showTitle.value = true
+  }, 100)
+})
 </script>
 
-<style scoped>
-.app-container {
-  min-height: 100vh;
-  background: linear-gradient(180deg, #FFF9F0 0%, #FFE8E1 50%, #E8F4F8 100%);
-  padding: 20px;
-  font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+<style>
+/* 全局样式重置 */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
-/* 主视图 */
-.main-view {
-  animation: fadeIn 0.8s ease-out;
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+}
+
+#app {
+  width: 100%;
+  height: 100vh;
+  position: relative;
+}
+</style>
+
+<style scoped>
+/* 语言切换按钮 */
+.lang-switch {
+  position: fixed;
+  top: 30px;
+  right: 30px;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  color: #ffffff;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.lang-switch:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.lang-switch:active {
+  transform: translateY(0);
+}
+
+/* 主容器 */
+.app-container {
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+  font-family: 'Inter', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  width: 100%;
+}
+
+/* 浮动功能按钮 */
+.floating-actions {
+  position: fixed;
+  top: 50%;
+  right: 30px;
+  transform: translateY(-50%);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.action-btn {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.action-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.action-btn:active {
+  transform: translateY(0);
+}
+
+.action-btn .btn-icon {
+  width: 24px;
+  height: 24px;
+  color: rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-btn:hover .btn-icon {
+  color: rgba(255, 255, 255, 1);
+}
+
+.action-btn .btn-label {
+  position: absolute;
+  right: 60px;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  color: white;
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  font-size: 0.9rem;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.3s ease;
+  transform: translateX(10px);
+  font-weight: 500;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.action-btn:hover .btn-label {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* 主内容 */
+.main-content {
   position: relative;
   z-index: 1;
 }
 
+/* 首页视图 - 固定容器 */
 .home-view {
-  min-height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  z-index: 1;
+  background: linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 50%, #F1F5F9 100%);
+  isolation: isolate;
+  display: block;
+  font-family: 'Playfair Display', 'Didot', 'Bodoni MT', 'Book Antiqua', 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', 'STSong', serif;
 }
 
-/* 主界面过渡动画 */
-.main-fade-enter-active {
-  transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+/* 全局艺术字体 */
+.app-container {
+  font-family: 'Playfair Display', 'Didot', 'Bodoni MT', 'Book Antiqua', 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', 'STSong', serif;
 }
 
-.main-fade-enter-from {
+/* 按钮和输入框使用更现代的字体组合 */
+button, input, textarea {
+  font-family: 'Playfair Display', 'Didot', 'Bodoni MT', 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', serif;
+}
+
+/* 季节背景 - 白色系清晰模式 */
+.home-view.season-spring {
+  background: linear-gradient(135deg, #FFFFFF 0%, #F0FDF4 50%, #F0F9FF 100%);
+}
+
+.home-view.season-summer {
+  background: linear-gradient(135deg, #FFFFFF 0%, #FFF7ED 50%, #FFF1F2 100%);
+}
+
+.home-view.season-autumn {
+  background: linear-gradient(135deg, #FFFFFF 0%, #FFFBEB 50%, #FEF2F2 100%);
+}
+
+.home-view.season-winter {
+  background: linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 50%, #F1F5F9 100%);
+}
+
+/* 流动色块背景层 */
+.mood-flow-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.flow-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0.4;
+  animation: floatBlob 20s ease-in-out infinite;
+}
+
+/* 春季 - 绿色系 */
+.blob-1 {
+  width: 400px;
+  height: 400px;
+  background: linear-gradient(135deg, #7CBA3D 0%, #90EE90 100%);
+  top: 10%;
+  left: 15%;
+  animation-delay: 0s;
+  animation-duration: 25s;
+}
+
+/* 夏季 - 深绿色 + 金色 */
+.blob-2 {
+  width: 500px;
+  height: 500px;
+  background: linear-gradient(135deg, #228B22 0%, #FFD700 100%);
+  top: 60%;
+  right: 10%;
+  animation-delay: -5s;
+  animation-duration: 30s;
+}
+
+/* 秋季 - 橙色系 */
+.blob-3 {
+  width: 350px;
+  height: 350px;
+  background: linear-gradient(135deg, #D2691E 0%, #FF8C00 100%);
+  top: 30%;
+  right: 25%;
+  animation-delay: -10s;
+  animation-duration: 22s;
+}
+
+/* 冬季 - 蓝白系 */
+.blob-4 {
+  width: 450px;
+  height: 450px;
+  background: linear-gradient(135deg, #ADD8E6 0%, #E6E6FA 100%);
+  bottom: 15%;
+  left: 20%;
+  animation-delay: -15s;
+  animation-duration: 28s;
+}
+
+/* 春季粉色点缀 */
+.blob-5 {
+  width: 300px;
+  height: 300px;
+  background: linear-gradient(135deg, #FFB7C5 0%, #90EE90 100%);
+  top: 70%;
+  left: 50%;
+  animation-delay: -8s;
+  animation-duration: 24s;
+}
+
+/* 冬季淡紫点缀 */
+.blob-6 {
+  width: 380px;
+  height: 380px;
+  background: linear-gradient(135deg, #E6E6FA 0%, #F0F8FF 100%);
+  top: 5%;
+  right: 40%;
+  animation-delay: -12s;
+  animation-duration: 26s;
+}
+
+@keyframes floatBlob {
+  0%, 100% {
+    transform: translate(0, 0) scale(1) rotate(0deg);
+  }
+  25% {
+    transform: translate(30px, -30px) scale(1.1) rotate(90deg);
+  }
+  50% {
+    transform: translate(-20px, 20px) scale(0.9) rotate(180deg);
+  }
+  75% {
+    transform: translate(20px, 30px) scale(1.05) rotate(270deg);
+  }
+}
+
+/* 区块通用样式 */
+.hero-section,
+.mood-selection-section,
+.journal-section,
+.history-section {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
   opacity: 0;
-  transform: translateY(20px);
+  visibility: hidden;
+  transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: scale(0.95);
+  pointer-events: none;
+  padding: 40px 20px;
+  overflow-y: auto;
+  background: transparent;
+  z-index: 2;
+  will-change: opacity, transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
-/* 动画关键帧 */
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-15px);
-  }
+.history-section.active {
+  align-items: center;
+  z-index: 100;
 }
 
-@keyframes float-small {
-  0%, 100% {
-    transform: translateY(0) rotate(0deg);
-  }
-  50% {
-    transform: translateY(-8px) rotate(5deg);
-  }
+.journal-section.active {
+  align-items: center;
+  z-index: 50;
 }
 
-@keyframes pulse {
-  0%, 100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.05);
-  }
+.journal-section .section-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
+  padding: 20px 0;
 }
 
-@keyframes pulse-dot {
-  0%, 100% {
-    opacity: 0.3;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.3);
-  }
+.hero-section.active {
+  z-index: 30;
 }
 
+.mood-selection-section.active {
+  z-index: 40;
+}
+
+.hero-section.active,
+.mood-selection-section.active,
+.journal-section.active,
+.history-section.active {
+  opacity: 1;
+  visibility: visible;
+  transform: scale(1);
+  pointer-events: auto;
+}
+
+.hero-content {
+  text-align: center;
+  max-width: 1200px;
+  width: 100%;
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+}
+
+.hero-title {
+  font-size: clamp(3.5rem, 10vw, 8rem);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  margin: 0 0 20px 0;
+  font-family: 'Playfair Display', 'Didot', 'Bodoni MT', 'Book Antiqua', 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', 'STSong', serif;
+  font-style: italic;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #ffffff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.4)) drop-shadow(0 2px 6px rgba(0, 0, 0, 0.3));
+  opacity: 1;
+  transition: all 1s ease;
+  position: relative;
+  animation: gentleFloat 6s ease-in-out infinite;
+  text-shadow: none;
+  padding: 0 10px;
+  line-height: 1.1;
+}
+
+.hero-title::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  right: -8px;
+  bottom: -8px;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #ffffff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: blur(50px);
+  opacity: 0.35;
+  z-index: -1;
+  animation: glowPulse 3s ease-in-out infinite;
+}
+
+.title-word {
+  display: inline-block;
+  animation: floatUp 1s ease-out forwards;
+  opacity: 0;
+  transform: translateY(40px);
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #ffffff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 0 25px rgba(255, 255, 255, 0.6));
+}
+
+.title-word {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.title-divider {
+  display: inline-block;
+  width: 2px;
+  height: 60px;
+  background: linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.8), transparent);
+  margin: 0 15px;
+  vertical-align: middle;
+  animation: floatUp 1s ease-out forwards;
+  opacity: 0;
+}
+
+.hero-subtitle {
+  font-size: clamp(1.1rem, 2.2vw, 1.6rem);
+  color: #ffffff;
+  margin: 15px auto 0;
+  max-width: 600px;
+  letter-spacing: 0.08em;
+  font-weight: 500;
+  opacity: 0;
+  transition: opacity 1.5s ease 0.5s;
+  text-align: center;
+  font-family: 'Playfair Display', 'Didot', 'Bodoni MT', 'Book Antiqua', 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', 'STSong', serif;
+  font-style: italic;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  padding: 14px 28px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  line-height: 1.6;
+}
+
+.hero-subtitle.subtitle-visible {
+  opacity: 1;
+}
+
+.scroll-hint {
+  position: fixed;
+  bottom: 50px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  animation: bounce 2s ease-in-out infinite;
+  z-index: 100;
+}
+
+.scroll-hint span {
+  font-size: 1rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  font-weight: 400;
+  font-style: italic;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+
+.scroll-hint span {
+  font-size: 0.85rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.scroll-arrow {
+  width: 24px;
+  height: 24px;
+  stroke: rgba(255, 255, 255, 0.7);
+}
+
+/* 第二屏：心情选择 */
+.mood-selection-section {
+  min-height: 100vh;
+  padding: 100px 20px;
+  position: relative;
+}
+
+.wave-guide {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 200px;
+  overflow: hidden;
+  opacity: 0.3;
+}
+
+.wave {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 200px;
+  background: linear-gradient(180deg, transparent 0%, rgba(102, 126, 234, 0.1) 100%);
+  animation: waveMove 10s linear infinite;
+}
+
+.section-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+}
+
+.section-title {
+  text-align: center;
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-weight: 700;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #f1f5f9 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin: 0 0 20px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+.title-icon {
+  font-size: 2.5rem;
+  animation: sparkle 3s ease-in-out infinite;
+}
+
+.section-subtitle {
+  text-align: center;
+  font-size: 1.2rem;
+  color: #ffffff;
+  margin-bottom: 60px;
+  font-weight: 500;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* 心情网格 */
+.mood-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 40px;
+  max-width: 1000px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.mood-card {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  will-change: transform;
+}
+
+.mood-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 100%);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.mood-card:hover {
+  transform: translateY(-5px);
+  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.mood-card:hover::before {
+  opacity: 1;
+}
+
+.mood-card:active {
+  transform: translateY(-2px);
+}
+
+.mood-card.selected {
+  border-color: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+}
+
+.mood-card.selected::before {
+  opacity: 1;
+}
+
+.mood-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.mood-emoji {
+  font-size: 2.5rem;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+  transition: transform 0.3s ease;
+  position: relative;
+  z-index: 1;
+  line-height: 1;
+}
+
+.mood-card:hover .mood-emoji {
+  transform: scale(1.1) rotate(5deg);
+}
+
+.mood-label {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #ffffff;
+  position: relative;
+  z-index: 1;
+  letter-spacing: 0.02em;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+  line-height: 1;
+}
+
+.mood-quote {
+  font-size: 0.85rem;
+  color: #ffffff;
+  line-height: 1.4;
+  font-style: italic;
+  position: relative;
+  z-index: 1;
+  font-weight: 400;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  opacity: 0.9;
+}
+
+.continue-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 0 auto;
+  padding: 18px 45px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+}
+
+.continue-btn:hover:not(:disabled) {
+  transform: translateY(-3px);
+  background: rgba(255, 255, 255, 0.22);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
+.continue-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.continue-btn .btn-arrow {
+  width: 20px;
+  height: 20px;
+  transition: transform 0.3s ease;
+}
+
+.continue-btn:hover .btn-arrow {
+  transform: translateX(5px);
+}
+
+/* 第三屏：日记区域 */
+.mode-tabs {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.change-mood-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0 auto 30px;
+  padding: 12px 24px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.change-mood-btn svg {
+  width: 18px;
+  height: 18px;
+  transition: transform 0.3s ease;
+}
+
+.change-mood-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.change-mood-btn:hover svg {
+  transform: rotate(-180deg);
+}
+
+.change-mood-btn:active {
+  transform: translateY(0);
+}
+
+.change-options {
+  display: flex;
+  gap: 12px;
+  margin: 0 auto 30px;
+}
+
+.change-date-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0 auto;
+  padding: 12px 24px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.change-date-btn svg {
+  width: 18px;
+  height: 18px;
+  transition: transform 0.3s ease;
+}
+
+.change-date-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.change-date-btn:active {
+  transform: translateY(0);
+}
+
+/* 日期选择器弹窗 */
+.date-picker-dialog {
+  padding: 20px;
+}
+
+.date-input {
+  width: 100%;
+  padding: 14px 18px;
+  font-size: 1.1rem;
+  font-family: 'Playfair Display', 'Didot', 'Bodoni MT', 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', serif;
+  color: #333;
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid rgba(251, 191, 36, 0.3);
+  border-radius: 12px;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.date-input:focus {
+  border-color: rgba(251, 191, 36, 0.6);
+  box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.15);
+}
+
+.date-picker-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+  justify-content: center;
+}
+
+/* 日期筛选 */
+.date-filter {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 40px;
+  align-items: center;
+  justify-content: center;
+}
+
+.filter-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.filter-btn.active {
+  background: rgba(251, 191, 36, 0.8);
+  border-color: rgba(251, 191, 36, 1);
+  color: rgba(255, 255, 255, 0.98);
+}
+
+.filter-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.filter-btn:active {
+  transform: translateY(0);
+}
+
+.filter-date-input {
+  padding: 10px 18px;
+  font-size: 0.95rem;
+  font-family: 'Playfair Display', 'Didot', 'Bodoni MT', 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', serif;
+  color: #333;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50px;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.filter-date-input:focus {
+  border-color: rgba(251, 191, 36, 0.5);
+  box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.1);
+}
+
+/* 未选择心情提示 */
+.mood-reminder {
+  text-align: center;
+  padding: 80px 40px;
+}
+
+.reminder-icon {
+  font-size: 5rem;
+  margin-bottom: 24px;
+  animation: gentleFloat 3s ease-in-out infinite;
+}
+
+.reminder-text {
+  font-size: 1.3rem;
+  color: rgba(255, 255, 255, 0.95);
+  margin-bottom: 30px;
+  line-height: 1.8;
+  font-weight: 500;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.go-select-mood-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 16px 40px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+}
+
+.go-select-mood-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
+.go-select-mood-btn:active {
+  transform: translateY(-1px);
+}
+
+.mode-tab {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 15px 30px;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #fef3c7;
+  background: rgba(255, 255, 255, 0.75);
+  border: 2px solid rgba(251, 191, 36, 0.3);
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.mode-tab svg {
+  width: 20px;
+  height: 20px;
+}
+
+.mode-tab:hover {
+  background: rgba(255, 255, 255, 0.8);
+  color: #fcd34d;
+  border-color: rgba(251, 191, 36, 0.5);
+}
+
+.mode-tab.active {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(251, 191, 36, 0.7);
+  color: #d97706;
+  box-shadow: 0 4px 20px rgba(251, 191, 36, 0.3);
+}
+
+.write-container {
+  max-width: 800px;
+  margin: 0 auto 30px;
+}
+
+.diary-textarea {
+  width: 100%;
+  min-height: 200px;
+  max-height: 300px;
+  padding: 25px;
+  font-size: 1.1rem;
+  line-height: 1.8;
+  color: #d97706;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(60px) saturate(250%);
+  -webkit-backdrop-filter: blur(60px) saturate(250%);
+  border: 2px solid rgba(255, 255, 255, 0.7);
+  border-radius: 24px;
+  resize: vertical;
+  outline: none;
+  transition: all 0.3s ease;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+}
+
+.diary-textarea:focus {
+  border-color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.7);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.35);
+}
+
+.diary-textarea::placeholder {
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 500;
+}
+
+.chat-container {
+  max-width: 800px;
+  margin: 0 auto 30px;
+}
+
+.chat-messages {
+  min-height: 200px;
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 20px;
+  margin-bottom: 15px;
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(60px) saturate(250%);
+  -webkit-backdrop-filter: blur(60px) saturate(250%);
+  border: 2px solid rgba(255, 255, 255, 0.65);
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  /* 隐藏滚动条但保留滚动功能 */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.chat-messages::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+.message {
+  margin-bottom: 18px;
+  animation: fadeIn 0.5s ease;
+}
+
+.message.user {
+  text-align: right;
+}
+
+.message.ai {
+  text-align: left;
+}
+
+.message-content {
+  display: inline-block;
+  max-width: 75%;
+  padding: 16px 22px;
+  border-radius: 20px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.95);
+  word-wrap: break-word;
+}
+
+.message.user .message-content {
+  background: linear-gradient(135deg, rgba(234, 179, 8, 0.95) 0%, rgba(202, 138, 4, 0.95) 100%);
+  border-bottom-right-radius: 6px;
+  color: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 4px 16px rgba(234, 179, 8, 0.4);
+}
+
+.message.ai .message-content {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.8) 0%, rgba(22, 163, 74, 0.8) 100%);
+  border-bottom-left-radius: 6px;
+  color: rgba(255, 255, 255, 0.98);
+}
+
+.chat-input-wrapper {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.chat-input {
+  flex: 1;
+  padding: 16px 22px;
+  font-size: 1rem;
+  color: #d97706;
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(50px) saturate(250%);
+  -webkit-backdrop-filter: blur(50px) saturate(250%);
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  border-radius: 50px;
+  outline: none;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.chat-input:focus {
+  border-color: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.chat-input::placeholder {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.send-btn {
+  width: 54px;
+  height: 54px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+.send-btn:hover {
+  transform: scale(1.1);
+}
+
+.send-btn svg {
+  width: 24px;
+  height: 24px;
+}
+
+.chat-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 15px;
+  justify-content: center;
+}
+
+.summarize-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  padding: 16px 28px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #f59e0b;
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid rgba(251, 191, 36, 0.5);
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  box-shadow: 0 4px 16px rgba(251, 191, 36, 0.25);
+}
+
+.summarize-btn:hover {
+  background: rgba(255, 255, 255, 1);
+  color: #d97706;
+  border-color: rgba(251, 191, 36, 0.7);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(251, 191, 36, 0.35);
+}
+
+.clear-chat-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  white-space: nowrap;
+  padding: 16px 28px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.15);
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.clear-chat-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.clear-chat-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.clear-chat-btn:active {
+  transform: translateY(0);
+}
+
+.plant-flower-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 20px auto 0;
+  padding: 18px 40px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.plant-flower-btn:hover:not(:disabled) {
+  transform: translateY(-5px) scale(1.02);
+  background: rgba(255, 255, 255, 0.22);
+  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.3);
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
+.plant-flower-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.plant-flower-btn .btn-icon {
+  font-size: 1.5rem;
+}
+
+/* 第四屏：历史花园 - 移除单独定义，使用通用样式 */
+.history-section {
+  /* 样式已合并到通用样式中 */
+}
+
+.history-section .section-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 10 !important;
+  width: 100%;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 40px 20px;
+}
+
+/* 历史记录滚动条样式 */
+.history-section .section-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.history-section .section-content::-webkit-scrollbar-track {
+  background: rgba(91, 79, 207, 0.1);
+  border-radius: 4px;
+}
+
+.history-section .section-content::-webkit-scrollbar-thumb {
+  background: rgba(91, 79, 207, 0.4);
+  border-radius: 4px;
+}
+
+.history-section .section-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(91, 79, 207, 0.6);
+}
+
+/* 历史花园返回按钮 */
+.history-back-btn {
+  position: fixed;
+  top: 30px;
+  left: 30px;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  color: #ffffff;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.history-back-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.history-back-btn:active {
+  transform: translateY(0);
+}
+
+.history-back-btn .back-icon {
+  width: 20px;
+  height: 20px;
+  transition: transform 0.3s ease;
+}
+
+.history-back-btn:hover .back-icon {
+  transform: translateX(-3px);
+}
+
+.history-back-btn span {
+  white-space: nowrap;
+}
+
+.flower-count {
+  text-align: center;
+  font-size: 1.3rem;
+  color: #ffffff;
+  margin-bottom: 50px;
+  font-weight: 500;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.garden-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 30px;
+  margin-bottom: 50px;
+}
+
+.flower-card {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 24px;
+  padding: 30px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.flower-card:hover {
+  transform: translateY(-10px) scale(1.05);
+  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.flower-emoji {
+  width: 100px;
+  height: 100px;
+  margin: 0 auto 20px;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.2));
+}
+
+.flower-date {
+  font-size: 1.2rem;
+  color: #ffffff;
+  margin-bottom: 10px;
+  font-weight: 600;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.flower-mood {
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.85);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.empty-garden {
+  text-align: center;
+  padding: 80px 30px;
+}
+
+.empty-icon {
+  font-size: 5rem;
+  margin-bottom: 20px;
+  animation: float 3s ease-in-out infinite;
+}
+
+.empty-garden p {
+  color: rgba(91, 79, 207, 0.75);
+  font-size: 1.2rem;
+  margin: 10px 0;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+}
+
+/* 心情详情弹窗 */
+.mood-detail {
+  text-align: center;
+}
+
+.detail-flower {
+  width: 130px;
+  height: 130px;
+  margin: 0 auto 25px;
+}
+
+.detail-date {
+  color: rgba(100, 100, 100, 0.8);
+  margin-bottom: 18px;
+  font-size: 1rem;
+}
+
+.detail-mood {
+  font-size: 1.25rem;
+  color: #333;
+  margin-bottom: 28px;
+  font-weight: 500;
+}
+
+.detail-diary {
+  text-align: left;
+  margin-bottom: 28px;
+  padding: 25px;
+  background: linear-gradient(135deg, #f9f9f9 0%, #ffffff 100%);
+  border-radius: 16px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.detail-diary h4 {
+  color: #667eea;
+  margin-bottom: 15px;
+  font-size: 1.05rem;
+}
+
+.detail-diary p {
+  line-height: 1.8;
+  color: #555;
+  white-space: pre-wrap;
+}
+
+.detail-chat {
+  text-align: left;
+  margin-bottom: 28px;
+  padding: 25px;
+  background: linear-gradient(135deg, #f9f9f9 0%, #ffffff 100%);
+  border-radius: 16px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.detail-chat h4 {
+  color: #667eea;
+  margin-bottom: 15px;
+  font-size: 1.05rem;
+}
+
+.chat-history {
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.chat-record {
+  padding: 14px;
+  margin-bottom: 12px;
+  border-radius: 12px;
+  line-height: 1.7;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.chat-record.user {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
+  text-align: right;
+}
+
+.chat-record.ai {
+  background: #f0f0f0;
+  text-align: left;
+}
+
+.chat-role {
+  font-weight: 600;
+  margin-right: 8px;
+}
+
+.chat-record.user .chat-role {
+  color: #667eea;
+}
+
+.chat-record.ai .chat-role {
+  color: #764ba2;
+}
+
+.detail-actions {
+  margin-top: 25px;
+}
+
+/* 花园配置弹窗 */
+.garden-config-dialog {
+  padding: 15px 0;
+}
+
+.config-header {
+  margin-bottom: 35px;
+}
+
+.config-tip {
+  color: rgba(100, 100, 100, 0.85);
+  font-size: 1rem;
+  line-height: 1.7;
+  margin-bottom: 18px;
+}
+
+.config-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.mood-flower-mapping {
+  max-height: 520px;
+  overflow-y: auto;
+  margin-bottom: 28px;
+  padding: 5px;
+}
+
+.mood-flower-mapping::-webkit-scrollbar {
+  width: 6px;
+}
+
+.mood-flower-mapping::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 3px;
+}
+
+.mood-flower-mapping::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 3px;
+}
+
+.mapping-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 24px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(250, 250, 250, 0.9) 100%);
+  border-radius: 16px;
+  margin-bottom: 14px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.mapping-item:hover {
+  transform: translateX(6px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.15);
+  border-color: rgba(102, 126, 234, 0.2);
+}
+
+.mood-info {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.mood-emoji {
+  font-size: 1.6rem;
+  width: 45px;
+  height: 45px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #FFE8E1 0%, #FFF5F5 100%);
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(255, 154, 158, 0.15);
+}
+
+.mood-name {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: #333;
+}
+
+.flower-selector {
+  flex-shrink: 0;
+}
+
+.flower-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.flower-emoji {
+  font-size: 1.2rem;
+}
+
+.flower-name {
+  font-size: 0.95rem;
+}
+
+.config-footer {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  padding-top: 25px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+/* 动画 */
 @keyframes fadeInUp {
   from {
     opacity: 0;
-    transform: translateY(30px);
+    transform: translateY(40px);
   }
   to {
     opacity: 1;
@@ -733,718 +2878,199 @@ const openConfigDialog = () => {
   }
 }
 
-.header {
-  padding: 35px 30px;
-  background: linear-gradient(135deg, #FF9A9E 0%, #FECFEF 50%, #FECFEF 100%);
-  border-radius: 25px;
-  margin-bottom: 30px;
-  box-shadow: 0 8px 25px rgba(255, 154, 158, 0.2);
-  position: relative;
-  overflow: hidden;
+@keyframes floatUp {
+  from {
+    opacity: 0;
+    transform: translateY(50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.header::before {
-  content: '';
-  position: absolute;
-  top: -50px;
-  right: -50px;
-  width: 150px;
-  height: 150px;
-  background: rgba(255, 255, 255, 0.3);
-  border-radius: 50%;
-  pointer-events: none;
+@keyframes bounce {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateX(-50%) translateY(0);
+  }
+  40% {
+    transform: translateX(-50%) translateY(-15px);
+  }
+  60% {
+    transform: translateX(-50%) translateY(-7px);
+  }
 }
 
-.header::after {
-  content: '';
-  position: absolute;
-  bottom: -30px;
-  left: -30px;
-  width: 100px;
-  height: 100px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 50%;
-  pointer-events: none;
+@keyframes waveMove {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50px);
+  }
 }
 
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  position: relative;
-  z-index: 1;
+@keyframes sparkle {
+  0%, 100% {
+    transform: scale(1) rotate(0deg);
+  }
+  50% {
+    transform: scale(1.2) rotate(10deg);
+  }
 }
 
-.header-text {
-  flex: 1;
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-15px);
+  }
 }
 
-.title {
-  font-size: 2.2rem;
-  color: white;
-  margin-bottom: 8px;
-  text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.1);
-  font-weight: 600;
-  letter-spacing: 1px;
+@keyframes gentleFloat {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
 }
 
-.subtitle {
-  color: rgba(255, 255, 255, 0.95);
+@keyframes glowPulse {
+  0%, 100% {
+    opacity: 0.5;
+    filter: blur(30px);
+  }
+  50% {
+    opacity: 0.8;
+    filter: blur(40px);
+  }
+}
+
+/* 日记结果样式 - 信纸样式 */
+.diary-result {
+  padding: 30px;
+  background: linear-gradient(to bottom, #fefefe 0%, #f9f9f9 100%);
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  line-height: 2.2;
+  color: #333;
   font-size: 1rem;
-  font-weight: 400;
-}
-
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-}
-
-.header-illustration {
-  flex-shrink: 0;
-  width: 80px;
-  height: 80px;
-}
-
-.garden-icon {
-  width: 100%;
-  height: 100%;
-  filter: drop-shadow(0 4px 10px rgba(196, 77, 255, 0.3));
-}
-
-.main-content {
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-/* 记录区域 */
-.record-section {
-  margin-bottom: 40px;
-}
-
-.record-card {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-radius: 24px;
-  padding: 35px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.8);
-}
-
-/* 心情选择器 */
-.mood-selector {
-  margin-bottom: 30px;
-}
-
-.mood-selector h3 {
-  margin-bottom: 20px;
-  color: #4A4A4A;
-  font-size: 1.3rem;
-  font-weight: 500;
-}
-
-.mood-options {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 18px;
-}
-
-.mood-option {
-  padding: 18px 12px;
-  border: 2px solid #F0F0F0;
-  border-radius: 18px;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  background: white;
+  max-height: 420px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.1),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.8),
+    inset 0 2px 0 rgba(0, 0, 0, 0.03);
   position: relative;
-  overflow: hidden;
+  font-family: 'Georgia', 'Times New Roman', serif;
 }
 
-.mood-option::before {
+/* 信纸横线效果 */
+.diary-result::before {
   content: '';
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(135deg, #FFB8CA 0%, #FFD1DC 100%);
-  opacity: 0;
-  transition: opacity 0.4s ease;
-  z-index: 0;
+  background-image: repeating-linear-gradient(
+    transparent,
+    transparent 2.2em,
+    #e8e8e8 2.2em,
+    #e8e8e8 2.25em
+  );
+  pointer-events: none;
+  border-radius: 3px;
 }
 
-.mood-option:hover {
-  border-color: #FF9A9E;
-  transform: translateY(-5px);
-  box-shadow: 0 8px 20px rgba(255, 154, 158, 0.2);
-}
-
-.mood-option:hover::before {
-  opacity: 0.1;
-}
-
-.mood-option.selected {
-  border-color: #FF9A9E;
-  background: linear-gradient(135deg, #FFF5F5 0%, #FFE8E8 100%);
-  transform: translateY(-3px);
-  box-shadow: 0 6px 18px rgba(255, 154, 158, 0.25);
-}
-
-.mood-option.selected::before {
-  opacity: 0.05;
-}
-
-.mood-illustration-container {
-  width: 70px;
-  height: 70px;
-  margin: 0 auto 10px;
-  position: relative;
-  z-index: 1;
-}
-
-.mood-label {
-  font-size: 0.9rem;
-  font-weight: 500;
-  color: #4A4A4A;
-  position: relative;
-  z-index: 1;
-}
-
-.mood-option.selected .mood-label {
-  color: #D63031;
-}
-
-/* 写日记模式 */
-.diary-mode {
-  margin-bottom: 25px;
-}
-
-.diary-mode h3 {
-  margin-bottom: 15px;
-  color: #333;
-  font-size: 1.3rem;
-}
-
-.diary-textarea {
-  font-size: 1rem;
-  line-height: 1.6;
-}
-
-/* AI对话模式 */
-.ai-chat-mode {
-  margin-bottom: 25px;
-}
-
-.ai-chat-mode h3 {
-  margin-bottom: 15px;
-  color: #333;
-  font-size: 1.3rem;
-}
-
-.chat-messages {
-  height: 300px;
-  overflow-y: auto;
-  border: 1px solid #e0e0e0;
-  border-radius: 10px;
-  padding: 20px;
-  background: #f9f9f9;
-  margin-bottom: 15px;
-}
-
-.message {
-  margin-bottom: 15px;
-}
-
-.message.user {
-  text-align: right;
-}
-
-.message.ai {
-  text-align: left;
-}
-
-.message-content {
-  display: inline-block;
-  max-width: 80%;
-  padding: 12px 16px;
-  border-radius: 18px;
-  line-height: 1.5;
-  word-wrap: break-word;
-}
-
-.message.user .message-content {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-}
-
-.message.ai .message-content {
-  background: #f0f0f0;
-  color: #333;
-}
-
-.chat-input {
-  display: flex;
-  gap: 10px;
-}
-
-.chat-input input {
-  flex: 1;
-}
-
-.summary-section {
-  margin-top: 15px;
-  text-align: center;
-}
-
-.summary-section button {
-  width: 100%;
-}
-
-/* 模式切换 */
-.mode-toggle {
-  display: flex;
-  justify-content: center;
-  gap: 15px;
-  margin-bottom: 25px;
-}
-
-/* 保存按钮 */
-.save-section {
-  text-align: center;
-}
-
-.save-section button {
-  font-size: 1.1rem;
-  padding: 12px 40px;
-}
-
-/* 花园区域 */
-.garden-section {
-  margin-top: 40px;
-}
-
-.garden-title {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 30px;
-}
-
-.garden-title h2 {
-  color: #333;
-  font-size: 1.8rem;
-}
-
-.flower-count {
-  color: #667eea;
-  font-weight: 500;
-  font-size: 1.1rem;
-}
-
-.garden-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 25px;
-}
-
-.flower-item {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-radius: 20px;
-  padding: 20px 15px;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  position: relative;
-  overflow: hidden;
-}
-
-.flower-item::before {
+/* 信纸左侧红线效果 */
+.diary-result::after {
   content: '';
   position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: linear-gradient(135deg, #FFE4E1 0%, #FFE8E1 100%);
-  opacity: 0;
-  transition: opacity 0.4s ease;
-  transform: rotate(45deg);
+  top: 0;
+  left: 40px;
+  bottom: 0;
+  width: 2px;
+  background-color: #ffb3b3;
+  pointer-events: none;
 }
 
-.flower-item:hover {
-  transform: translateY(-8px) scale(1.02);
-  box-shadow: 0 12px 30px rgba(255, 154, 158, 0.15);
+.diary-result::-webkit-scrollbar {
+  width: 8px;
 }
 
-.flower-item:hover::before {
-  opacity: 0.5;
-}
-
-.flower {
-  width: 90px;
-  height: 90px;
-  margin: 0 auto 12px;
-  position: relative;
-  z-index: 1;
-}
-
-.flower-date {
-  color: #7A7A7A;
-  font-size: 0.85rem;
-  position: relative;
-  z-index: 1;
-  font-weight: 400;
-}
-
-.empty-garden {
-  text-align: center;
-  padding: 80px 20px;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-radius: 24px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.8);
-}
-
-.empty-icon {
-  width: 80px;
-  height: 80px;
-  margin: 0 auto 20px;
-  opacity: 0.6;
-}
-
-.empty-garden p {
-  color: #999;
-  font-size: 1.1rem;
-}
-
-/* 心情详情 */
-.mood-detail {
-  text-align: center;
-}
-
-.detail-flower {
-  width: 120px;
-  height: 120px;
-  margin: 0 auto 20px;
-}
-
-.detail-date {
-  color: #666;
-  margin-bottom: 15px;
-  font-size: 0.95rem;
-}
-
-.detail-mood {
-  font-size: 1.2rem;
-  color: #333;
-  margin-bottom: 25px;
-  font-weight: 500;
-}
-
-.detail-diary {
-  text-align: left;
-  margin-bottom: 25px;
-  padding: 20px;
-  background: #f9f9f9;
-  border-radius: 12px;
-}
-
-.detail-diary h4 {
-  color: #667eea;
-  margin-bottom: 12px;
-  font-size: 1rem;
-}
-
-.detail-diary p {
-  line-height: 1.8;
-  color: #555;
-  white-space: pre-wrap;
-}
-
-.detail-chat {
-  text-align: left;
-  margin-bottom: 25px;
-  padding: 20px;
-  background: #f9f9f9;
-  border-radius: 12px;
-}
-
-.detail-chat h4 {
-  color: #667eea;
-  margin-bottom: 12px;
-  font-size: 1rem;
-}
-
-.chat-history {
-  max-height: 250px;
-  overflow-y: auto;
-}
-
-.chat-record {
-  padding: 12px;
-  margin-bottom: 10px;
-  border-radius: 8px;
-  line-height: 1.6;
-}
-
-.chat-record.user {
-  background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
-  text-align: right;
-}
-
-.chat-record.ai {
+.diary-result::-webkit-scrollbar-track {
   background: #f0f0f0;
-  text-align: left;
 }
 
-.chat-role {
-  font-weight: 600;
-  margin-right: 5px;
-}
-
-.chat-record.user .chat-role {
-  color: #667eea;
-}
-
-.chat-record.ai .chat-role {
-  color: #764ba2;
-}
-
-.detail-actions {
-  margin-top: 20px;
-}
-
-/* AI配置对话框 */
-.config-dialog {
-  padding: 10px 0;
-}
-
-.config-info {
-  background: #f9f9f9;
-  padding: 20px;
-  border-radius: 8px;
-}
-
-.info-text {
-  color: #666;
-  margin-bottom: 15px;
-  line-height: 1.6;
-}
-
-.current-status {
-  font-size: 0.95rem;
-}
-
-.current-status span {
-  margin-right: 8px;
-}
-
-.status-ok {
-  color: #52c41a;
-  font-weight: 500;
-}
-
-/* 日记结果样式 */
-.diary-result {
-  padding: 20px;
-  background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
-  border-radius: 12px;
-  line-height: 2;
-  color: #333;
-  font-size: 1rem;
-  max-height: 400px;
-  overflow-y: auto;
-  white-space: pre-wrap;
-}
-
-/* 花园库配置弹窗 */
-.garden-config-dialog {
-  padding: 10px 0;
-}
-
-.config-header {
-  margin-bottom: 30px;
-}
-
-.config-tip {
-  color: #666;
-  font-size: 0.95rem;
-  line-height: 1.6;
-  margin-bottom: 15px;
-}
-
-.config-actions {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.mood-flower-mapping {
-  max-height: 500px;
-  overflow-y: auto;
-  margin-bottom: 25px;
-}
-
-.mapping-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 20px;
-  background: linear-gradient(135deg, #f9f9f9 0%, #ffffff 100%);
-  border-radius: 12px;
-  margin-bottom: 12px;
-  border: 1px solid #e0e0e0;
-  transition: all 0.3s ease;
-}
-
-.mapping-item:hover {
-  transform: translateX(5px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  border-color: #FF9A9E;
-}
-
-.mood-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.mood-emoji {
-  font-size: 1.5rem;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #FFE8E1 0%, #FFF5F5 100%);
-  border-radius: 50%;
-}
-
-.mood-name {
-  font-size: 1.1rem;
-  font-weight: 500;
-  color: #333;
-}
-
-.flower-selector {
-  flex-shrink: 0;
-}
-
-.flower-option {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.flower-emoji {
-  font-size: 1.2rem;
-}
-
-.flower-name {
-  font-size: 0.95rem;
-}
-
-.config-footer {
-  display: flex;
-  justify-content: center;
-  gap: 15px;
-  padding-top: 20px;
-  border-top: 1px solid #e0e0e0;
+.diary-result::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 4px;
 }
 
 /* 响应式 */
 @media (max-width: 768px) {
-  .header-content {
-    flex-direction: column;
-    text-align: center;
-  }
-
-  .header-illustration {
-    margin-left: 0;
-    margin-top: 15px;
-  }
-
-  .title {
-    font-size: 1.8rem;
-  }
-
-  .subtitle {
-    font-size: 0.95rem;
-  }
-
-  .mood-options {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-  }
-
-  .mood-illustration-container {
-    width: 55px;
-    height: 55px;
-  }
-
-  .mood-label {
-    font-size: 0.8rem;
-  }
-
-  .garden-grid {
-    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-    gap: 15px;
-  }
-
-  .flower {
-    width: 70px;
-    height: 70px;
-  }
-
-  .detail-flower {
-    width: 90px;
-    height: 90px;
-  }
-
-  .info-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 480px) {
-  .header {
-    padding: 25px 20px;
-  }
-
-  .title {
-    font-size: 1.5rem;
-  }
-
-  .subtitle {
-    font-size: 0.85rem;
-  }
-
-  .mood-options {
-    grid-template-columns: repeat(2, 1fr);
+  .floating-actions {
+    right: 15px;
     gap: 10px;
   }
 
-  .mood-option {
-    padding: 14px 10px;
-  }
-
-  .mood-illustration-container {
+  .action-btn {
     width: 50px;
     height: 50px;
   }
 
-  .mood-label {
-    font-size: 0.75rem;
+  .action-btn .btn-icon {
+    width: 24px;
+    height: 24px;
+  }
+
+  .action-btn .btn-label {
+    display: none;
+  }
+
+  .hero-title {
+    font-size: 2.5rem;
+  }
+
+  .title-divider {
+    height: 40px;
+  }
+
+  .mood-grid {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+  }
+
+  .garden-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 20px;
+  }
+
+  .section-title {
+    font-size: 1.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero-title {
+    font-size: 2rem;
+  }
+
+  .mood-grid {
+    grid-template-columns: 1fr;
   }
 
   .garden-grid {
     grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
+  }
+
+  .plant-flower-btn {
+    font-size: 1rem;
+    padding: 16px 30px;
   }
 }
-
 </style>

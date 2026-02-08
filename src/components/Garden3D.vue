@@ -11,18 +11,18 @@
         </svg>
       </button>
       <div class="toggle-tooltip" :class="{ hidden: !controlsVisible }">
-        {{ controlsVisible ? '隐藏' : '显示' }}控制台
+        {{ controlsVisible ? t('hideControls') : t('showControls') }}
       </div>
     </div>
 
     <!-- 左侧统一控制面板 -->
-    <div class="controls-panel" :class="{ hidden: !controlsVisible }">
+    <div ref="controlsPanelRef" class="controls-panel" :class="{ hidden: !controlsVisible }" @wheel.stop>
       <!-- 情绪筛选器 -->
       <div class="panel-section">
-        <div class="panel-title">😊 情绪筛选</div>
+        <div class="panel-title">😊 {{ t('moodFilter') }}</div>
         <div class="filter-buttons">
           <button
-            v-for="mood in moodOptions"
+            v-for="mood in moodOptionsI18n"
             :key="mood.value"
             class="mood-btn"
             :class="{ active: selectedMood === mood.value }"
@@ -40,7 +40,7 @@
 
       <!-- 风力控制器 -->
       <div class="panel-section">
-        <div class="panel-title">💨 风力</div>
+        <div class="panel-title">💨 {{ t('wind') }}</div>
         <div class="wind-control">
           <div class="wind-header">
             <span class="wind-label">{{ Math.round(windIntensity * 100) }}%</span>
@@ -58,96 +58,96 @@
 
       <!-- 日夜模式 -->
       <div class="panel-section">
-        <div class="panel-title">🌅 日夜模式</div>
+        <div class="panel-title">🌅 {{ t('dayNightMode') }}</div>
         <div class="panel-buttons">
           <button
             class="env-btn"
             :class="{ active: timeOfDay === 'day' }"
             @click="setTimeOfDay('day')"
           >
-            ☀️ 日间
+            ☀️ {{ t('dayMode') }}
           </button>
           <button
             class="env-btn"
             :class="{ active: timeOfDay === 'night' }"
             @click="setTimeOfDay('night')"
           >
-            🌙 夜间
+            🌙 {{ t('nightMode') }}
           </button>
         </div>
       </div>
 
       <!-- 四季模式 -->
       <div class="panel-section">
-        <div class="panel-title">🍂 四季模式</div>
+        <div class="panel-title">🍂 {{ t('seasonMode') }}</div>
         <div class="panel-buttons">
           <button
             class="env-btn"
             :class="{ active: season === 'spring' }"
             @click="setSeason('spring')"
           >
-            🌸 春
+            🌸 {{ t('spring') }}
           </button>
           <button
             class="env-btn"
             :class="{ active: season === 'summer' }"
             @click="setSeason('summer')"
           >
-            ☀️ 夏
+            ☀️ {{ t('summer') }}
           </button>
           <button
             class="env-btn"
             :class="{ active: season === 'autumn' }"
             @click="setSeason('autumn')"
           >
-            🍁 秋
+            🍁 {{ t('autumn') }}
           </button>
           <button
             class="env-btn"
             :class="{ active: season === 'winter' }"
             @click="setSeason('winter')"
           >
-            ❄️ 冬
+            ❄️ {{ t('winter') }}
           </button>
         </div>
       </div>
 
       <!-- 天气 -->
       <div class="panel-section">
-        <div class="panel-title">🌧️ 天气</div>
+        <div class="panel-title">🌧️ {{ t('weather') }}</div>
         <div class="panel-buttons">
           <button
             class="env-btn"
             :class="{ active: weather === 'clear' }"
             @click="setWeather('clear')"
           >
-            ☀️ 晴
+            ☀️ {{ t('sunny') }}
           </button>
           <button
             class="env-btn"
             :class="{ active: weather === 'rain' }"
             @click="setWeather('rain')"
           >
-            🌧️ 雨
+            🌧️ {{ t('rainy') }}
           </button>
           <button
             class="env-btn"
             :class="{ active: weather === 'snow' }"
             @click="setWeather('snow')"
           >
-            ❄️ 雪
+            ❄️ {{ t('snowy') }}
           </button>
         </div>
       </div>
 
       <!-- 音量控制 -->
       <div class="panel-section">
-        <div class="panel-title">🔊 音量</div>
+        <div class="panel-title">🔊 {{ t('volume') }}</div>
 
         <!-- 环境音量 -->
         <div class="volume-control">
           <div class="volume-header">
-            <span class="volume-label">🎵 环境音</span>
+            <span class="volume-label">🎵 {{ t('ambientSound') }}</span>
             <span class="volume-value">{{ Math.round(ambientVolume * 100) }}%</span>
           </div>
           <input
@@ -163,7 +163,7 @@
         <!-- 蜜蜂音量 -->
         <div class="volume-control">
           <div class="volume-header">
-            <span class="volume-label">🐝 蜜蜂音</span>
+            <span class="volume-label">🐝 {{ t('beeSound') }}</span>
             <span class="volume-value">{{ Math.round(beeVolume * 100) }}%</span>
           </div>
           <input
@@ -183,7 +183,7 @@
           :class="{ muted: isMuted }"
           @click="toggleMute"
         >
-          {{ isMuted ? '🔊 取消静音' : '🔇 静音' }}
+          {{ isMuted ? '🔊 ' + t('unmute') : '🔇 ' + t('mute') }}
         </button>
       </div>
     </div>
@@ -191,7 +191,7 @@
     <!-- 月份选择器（顶部居中） -->
     <div class="month-selector">
       <button
-        v-for="(month, index) in allMonths"
+        v-for="(month, index) in allMonthsI18n"
         :key="month.key"
         class="month-btn"
         :class="{ active: currentMonthIndex === index }"
@@ -201,12 +201,9 @@
       </button>
     </div>
 
-    <!-- 返回首页按钮 -->
+    <!-- 返回主页按钮 -->
     <button class="back-btn" @click="goBack">
-      <svg class="back-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M19 12H5M12 19l-7-7 7-7"/>
-      </svg>
-      <span>返回首页</span>
+      <span>{{ t('backToHome') }}</span>
     </button>
 
     <!-- 详情弹窗 -->
@@ -231,7 +228,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
+import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
@@ -241,8 +238,87 @@ const props = defineProps({
   records: {
     type: Array,
     default: () => []
+  },
+  currentLang: {
+    type: String,
+    default: 'zh'
   }
 })
+
+// 语言包
+const i18n = {
+  zh: {
+    hideControls: '隐藏控制台',
+    showControls: '显示控制台',
+    moodFilter: '情绪筛选',
+    allMoods: '全部',
+    happy: '开心',
+    sad: '难过',
+    angry: '生气',
+    calm: '平静',
+    excited: '兴奋',
+    tired: '疲惫',
+    anxious: '焦虑',
+    hopeful: '充满希望',
+    wind: '风力',
+    dayNightMode: '日夜模式',
+    dayMode: '日间',
+    nightMode: '夜间',
+    seasonMode: '四季模式',
+    spring: '春',
+    summer: '夏',
+    autumn: '秋',
+    winter: '冬',
+    weather: '天气',
+    sunny: '晴',
+    rainy: '雨',
+    snowy: '雪',
+    volume: '音量',
+    ambientSound: '环境音',
+    beeSound: '蜜蜂音',
+    mute: '静音',
+    unmute: '取消静音',
+    backToHome: '返回首页'
+  },
+  en: {
+    hideControls: 'Hide Controls',
+    showControls: 'Show Controls',
+    moodFilter: 'Mood Filter',
+    allMoods: 'All',
+    happy: 'Happy',
+    sad: 'Sad',
+    angry: 'Angry',
+    calm: 'Calm',
+    excited: 'Excited',
+    tired: 'Tired',
+    anxious: 'Anxious',
+    hopeful: 'Hopeful',
+    wind: 'Wind',
+    dayNightMode: 'Day/Night Mode',
+    dayMode: 'Day',
+    nightMode: 'Night',
+    seasonMode: 'Season Mode',
+    spring: 'Spring',
+    summer: 'Summer',
+    autumn: 'Autumn',
+    winter: 'Winter',
+    weather: 'Weather',
+    sunny: 'Sunny',
+    rainy: 'Rainy',
+    snowy: 'Snowy',
+    volume: 'Volume',
+    ambientSound: 'Ambient',
+    beeSound: 'Bee',
+    mute: 'Mute',
+    unmute: 'Unmute',
+    backToHome: 'Back to Home'
+  }
+}
+
+// 翻译函数
+const t = (key) => {
+  return i18n[props.currentLang]?.[key] || i18n['zh'][key] || key
+}
 
 const emit = defineEmits(['back'])
 
@@ -255,13 +331,29 @@ const windIntensity = ref(0.5) // 风力强度 (0-1)
 let audioContext = null // 音频上下文
 let ambientSource = null // 环境音源
 let ambientGainNode = null // 音量控制节点
+let currentAmbientAudio = null // 当前加载的环境音频buffer
+let audioListener = null // 音频监听器
 
 // 音量控制
-const ambientVolume = ref(0.75) // 环境音量 (0-1)
-const beeVolume = ref(0.2) // 蜜蜂音量 (0-1)
+const ambientVolume = ref(0.6) // 环境音量 (0-1)
+const beeVolume = ref(0.15) // 蜜蜂音量 (0-1) - 听觉舒适的默认值
 const isMuted = ref(false) // 静音状态
-const previousAmbientVolume = 0.75 // 保存静音前的环境音量
-const previousBeeVolume = 0.2 // 保存静音前的蜜蜂音量
+const previousAmbientVolume = 0.6 // 保存静音前的环境音量
+const previousBeeVolume = 0.15 // 保存静音前的蜜蜂音量
+
+// 检查是否应该关闭蜜蜂音（冬天、夜晚、雨天、雪天）
+const shouldMuteBee = () => {
+  return season.value === 'winter' || timeOfDay.value === 'night' || weather.value === 'rain' || weather.value === 'snow'
+}
+
+// 更新蜜蜂音量（根据环境条件自动调整）
+const updateBeeVolume = () => {
+  if (shouldMuteBee()) {
+    beeVolume.value = 0
+  } else {
+    beeVolume.value = 0.15 // 恢复默认音量
+  }
+}
 
 // 环境控制状态
 const timeOfDay = ref('day') // day, night
@@ -269,19 +361,33 @@ const season = ref('spring') // spring, summer, autumn, winter
 const weather = ref('clear') // clear, rain, snow
 const controlsVisible = ref(true) // 控制面板可见性
 
-// 情绪选项
-const moodOptions = [
-  { value: 'all', label: '全部', color: '#999', emoji: '🌸' },
-  { value: 'happy', label: '开心', color: '#FFD700', emoji: '😊' },
-  { value: 'sad', label: '难过', color: '#4169E1', emoji: '😢' },
-  { value: 'angry', label: '生气', color: '#FF4500', emoji: '😠' },
-  { value: 'calm', label: '平静', color: '#98FB98', emoji: '😌' },
-  { value: 'excited', label: '兴奋', color: '#FF69B4', emoji: '🎉' },
-  { value: 'tired', label: '疲惫', color: '#9370DB', emoji: '😴' },
-  { value: 'anxious', label: '焦虑', color: '#FFA500', emoji: '😰' },
-  { value: 'hopeful', label: '充满希望', color: '#98FB98', emoji: '🌟' }
+// 情绪选项（基础数据）
+const moodOptionsBase = [
+  { value: 'all', color: '#999', emoji: '🌸' },
+  { value: 'happy', color: '#FFD700', emoji: '😊' },
+  { value: 'sad', color: '#4169E1', emoji: '😢' },
+  { value: 'angry', color: '#FF4500', emoji: '😠' },
+  { value: 'calm', color: '#98FB98', emoji: '😌' },
+  { value: 'excited', color: '#FF69B4', emoji: '🎉' },
+  { value: 'tired', color: '#9370DB', emoji: '😴' },
+  { value: 'anxious', color: '#FFA500', emoji: '😰' },
+  { value: 'hopeful', color: '#98FB98', emoji: '🌟' }
 ]
+
+// 国际化情绪选项
+const moodOptionsI18n = computed(() => {
+  return moodOptionsBase.map(mood => ({
+    ...mood,
+    label: t(mood.value === 'all' ? 'allMoods' : mood.value)
+  }))
+})
+
+// 情绪选项（向后兼容）
+const moodOptions = moodOptionsI18n
 const currentMonthIndex = ref(0)
+
+// 控制面板引用
+const controlsPanelRef = ref(null)
 
 let scene, camera, renderer, controls
 let gardenGrids = []
@@ -352,9 +458,27 @@ const allMonths = computed(() => {
 
   return allMonthKeys.map(key => ({
     key,
-    label: key.replace('-', '年') + '月',
     records: groups[key] || []
   }))
+})
+
+// 国际化月份标签
+const allMonthsI18n = computed(() => {
+  return allMonths.value.map(month => {
+    const [year, monthNum] = month.key.split('-')
+    if (props.currentLang === 'zh') {
+      return {
+        ...month,
+        label: `${year}年${monthNum}月`
+      }
+    } else {
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+      return {
+        ...month,
+        label: `${monthNames[parseInt(monthNum) - 1]} ${year}`
+      }
+    }
+  })
 })
 
 // 按日期分组
@@ -373,17 +497,7 @@ const groupRecordsByDate = (records) => {
 
 // 获取心情标签
 const getMoodLabel = (mood) => {
-  const moodMap = {
-    happy: '开心',
-    sad: '难过',
-    angry: '生气',
-    calm: '平静',
-    excited: '兴奋',
-    tired: '疲惫',
-    anxious: '焦虑',
-    hopeful: '充满希望'
-  }
-  return moodMap[mood] || '未知'
+  return t(mood)
 }
 
 // 初始化音频系统
@@ -397,15 +511,15 @@ const initAudio = () => {
       audioContext.resume()
     }
 
-    // 创建音频监听器
-    const listener = new THREE.AudioListener()
-    camera.add(listener)
+    // 创建音频监听器并保存引用
+    audioListener = new THREE.AudioListener()
+    camera.add(audioListener)
 
     // 加载并播放环境音
-    loadAmbientAudio(listener)
+    loadAmbientAudio(audioListener)
 
     // 加载蜜蜂声音
-    loadBeeAudio(listener)
+    loadBeeAudio(audioListener)
 
     console.log('音频系统初始化成功')
   } catch (error) {
@@ -413,21 +527,127 @@ const initAudio = () => {
   }
 }
 
+// 获取当前环境音文件名
+const getCurrentAmbientAudioFile = () => {
+  // 优先级：天气 > 日夜
+  if (weather.value === 'rain') {
+    return '/audio/rain.wav'
+  } else if (weather.value === 'snow') {
+    return '/audio/snowfall.wav'
+  } else if (timeOfDay.value === 'day') {
+    return '/audio/garden_background_day.ogg'
+  } else {
+    return '/audio/garden_background_night.wav'
+  }
+}
+
 // 加载环境音
 const loadAmbientAudio = (listener) => {
   const audioLoader = new THREE.AudioLoader()
+  const audioFile = getCurrentAmbientAudioFile()
 
-  audioLoader.load('/audio/340073__klankbeeld__citygarden6pm-nl-160317_02.ogg', (buffer) => {
+  console.log(`开始加载环境音: ${audioFile}`)
+
+  audioLoader.load(audioFile, (buffer) => {
+    // 保存当前音频buffer
+    currentAmbientAudio = buffer
+
+    // 计算音量倍数
+    let volumeMultiplier = 1
+    if (audioFile.includes('snowfall')) {
+      volumeMultiplier = 1.5 // 雪天音量增加50%
+    }
+
     // 创建环境音源
     ambientSource = new THREE.Audio(listener)
     ambientSource.setBuffer(buffer)
     ambientSource.setLoop(true)
-    ambientSource.setVolume(ambientVolume.value) // 使用动态音量控制
-    ambientSource.play()
+    ambientSource.setVolume(ambientVolume.value * volumeMultiplier)
 
-    console.log('环境音加载成功')
-  }, undefined, (error) => {
+    // 确保音频上下文已恢复
+    if (audioContext.state === 'suspended') {
+      audioContext.resume()
+    }
+
+    // 开始播放
+    try {
+      ambientSource.play()
+      console.log(`环境音加载并播放成功: ${audioFile}, 时长: ${buffer.duration.toFixed(2)}秒, 音量倍数: ${volumeMultiplier}`)
+    } catch (e) {
+      console.error('播放环境音失败:', e)
+    }
+  }, (xhr) => {
+    // 加载进度
+    if (xhr.lengthComputable) {
+      const percent = (xhr.loaded / xhr.total * 100).toFixed(1)
+      console.log(`环境音加载进度: ${percent}%`)
+    }
+  }, (error) => {
     console.warn('环境音加载失败，可能是文件不存在:', error)
+  })
+}
+
+// 切换环境音（当季节、天气、日夜改变时调用）
+const switchAmbientAudio = () => {
+  if (!audioContext || !audioListener) return
+
+  const newAudioFile = getCurrentAmbientAudioFile()
+
+  // 保存当前音量
+  let currentVolume = ambientVolume.value
+  if (ambientSource && ambientSource.getVolume) {
+    currentVolume = ambientSource.getVolume()
+  }
+
+  // 停止并清理旧的音源
+  if (ambientSource) {
+    try {
+      if (ambientSource.isPlaying) {
+        ambientSource.stop()
+      }
+      ambientSource.disconnect()
+    } catch (e) {
+      console.warn('停止环境音时出错:', e)
+    }
+  }
+
+  // 加载新音频
+  const audioLoader = new THREE.AudioLoader()
+  audioLoader.load(newAudioFile, (buffer) => {
+    currentAmbientAudio = buffer
+
+    // 计算音量倍数
+    let volumeMultiplier = 1
+    if (newAudioFile.includes('snowfall')) {
+      volumeMultiplier = 1.5 // 雪天音量增加50%
+    }
+
+    // 创建新的音源
+    ambientSource = new THREE.Audio(audioListener)
+    ambientSource.setBuffer(buffer)
+    ambientSource.setLoop(true)
+    ambientSource.setVolume(isMuted.value ? 0 : currentVolume * volumeMultiplier)
+
+    // 确保音频上下文已恢复
+    if (audioContext.state === 'suspended') {
+      audioContext.resume()
+    }
+
+    // 开始播放
+    try {
+      ambientSource.play()
+      console.log(`环境音切换成功: ${newAudioFile}, 时长: ${buffer.duration.toFixed(2)}秒, 音量倍数: ${volumeMultiplier}`)
+    } catch (e) {
+      console.error('播放切换后的环境音失败:', e)
+    }
+  }, (xhr) => {
+    // 加载进度
+    if (xhr.lengthComputable) {
+      const percent = (xhr.loaded / xhr.total * 100).toFixed(1)
+      console.log(`环境音加载进度: ${percent}%`)
+    }
+  }, (error) => {
+    console.warn('环境音切换失败:', error)
   })
 }
 
@@ -435,7 +655,7 @@ const loadAmbientAudio = (listener) => {
 const loadBeeAudio = (listener) => {
   const audioLoader = new THREE.AudioLoader()
 
-  audioLoader.load('/audio/588519__felixblume__bee-recorded-individually-zaline.wav', (buffer) => {
+  audioLoader.load('/audio/bees.wav', (buffer) => {
     // 在不同位置创建多个蜜蜂声音源
     const beePositions = [
       new THREE.Vector3(0, 5, 0),
@@ -452,7 +672,7 @@ const loadBeeAudio = (listener) => {
       bee.setRefDistance(30)  // 参考距离（距离30处音量开始衰减）
       bee.setMaxDistance(150)  // 最大距离（超过此距离无法听到）
       bee.setRolloffFactor(2)  // 衰减因子（2表示快速衰减）
-      bee.setVolume(beeVolume.value) // 使用动态音量控制（原来的1/4）
+      bee.setVolume(beeVolume.value) // 使用动态音量控制
       bee.play()
 
       // 保存蜜蜂音源和位置
@@ -525,7 +745,7 @@ const applyWindToFlowers = () => {
 // 格式化详细日期
 const formatDetailDate = (dateStr) => {
   const date = new Date(dateStr)
-  return date.toLocaleString('zh-CN', {
+  return date.toLocaleString(props.currentLang === 'zh' ? 'zh-CN' : 'en-US', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -599,6 +819,7 @@ const initThreeJS = () => {
   controls.panSpeed = 1.0
   controls.rotateSpeed = 0.5
   controls.zoomSpeed = 1.0
+  controls.enableZoom = true
 
   // 交换左右键功能：右键旋转，左键平移
   controls.mouseButtons = {
@@ -638,6 +859,13 @@ const initThreeJS = () => {
   window.addEventListener('resize', onWindowResize)
   renderer.domElement.addEventListener('click', onCanvasClick)
   renderer.domElement.addEventListener('mousemove', onCanvasMouseMove)
+
+  // 阻止控制面板的滚动事件传播到OrbitControls
+  if (controlsPanelRef.value) {
+    controlsPanelRef.value.addEventListener('wheel', (event) => {
+      event.stopPropagation()
+    }, { passive: false })
+  }
 
   // 开始动画
   animate()
@@ -1119,7 +1347,7 @@ const createWeatherParticles = () => {
 const createAllMonthCalendars = () => {
   console.log('创建所有月份的日历，共', allMonths.value.length, '个月份')
   allMonths.value.forEach((monthData, monthIndex) => {
-    console.log(`创建 ${monthData.label} 的日历，记录数:`, monthData.records.length)
+    console.log(`创建 ${monthData.key} 的日历，记录数:`, monthData.records.length)
     createMonthCalendar(monthData, monthIndex)
   })
 }
@@ -1145,7 +1373,7 @@ const createMonthCalendar = (monthData, monthIndex) => {
   const startX = offsetX - ((cellSize * cols + spacing * (cols - 1)) / 2)
   const startZ = -((cellSize * rows + spacing * (rows - 1)) / 2)
 
-  console.log(`${monthData.label} - 天数: ${daysInMonth}, 行数: ${rows}, 起始X: ${startX}`)
+  console.log(`${monthData.key} - 天数: ${daysInMonth}, 行数: ${rows}, 起始X: ${startX}`)
 
   for (let day = 1; day <= daysInMonth; day++) {
     const col = (day - 1) % cols
@@ -1201,115 +1429,251 @@ const createDateLabel = (day, monthKey, tilePosition, tile, recordCount) => {
   // 解析月份信息（从 "2025-02" 格式）
   const year = monthKey.split('-')[0]
   const month = monthKey.split('-')[1]
-  const dateText = `${month}.${day.toString().padStart(2, '0')}` // 格式：02.15
+  let dateText
+  if (props.currentLang === 'zh') {
+    dateText = `${month}.${day.toString().padStart(2, '0')}` // 中文格式：02.15
+  } else {
+    dateText = `${month}/${day.toString().padStart(2, '0')}` // 英文格式：02/15
+  }
+
+  // 根据日夜和季节获取环境色调
+  const getEnvironmentColors = () => {
+    if (timeOfDay.value === 'night') {
+      // 夜间：蓝紫色系
+      return {
+        primary: 'rgba(100, 130, 200, ',
+        secondary: 'rgba(150, 180, 255, ',
+        highlight: 'rgba(200, 220, 255, ',
+        glow: 'rgba(120, 150, 230, '
+      }
+    } else {
+      // 日间：根据季节
+      switch (season.value) {
+        case 'spring':
+          // 春：粉色系
+          return {
+            primary: 'rgba(255, 180, 200, ',
+            secondary: 'rgba(255, 200, 220, ',
+            highlight: 'rgba(255, 220, 240, ',
+            glow: 'rgba(255, 190, 210, '
+          }
+        case 'summer':
+          // 夏：蓝色系
+          return {
+            primary: 'rgba(100, 180, 255, ',
+            secondary: 'rgba(150, 200, 255, ',
+            highlight: 'rgba(200, 230, 255, ',
+            glow: 'rgba(130, 190, 255, '
+          }
+        case 'autumn':
+          // 秋：橙黄色系
+          return {
+            primary: 'rgba(255, 180, 120, ',
+            secondary: 'rgba(255, 200, 150, ',
+            highlight: 'rgba(255, 220, 180, ',
+            glow: 'rgba(255, 190, 140, '
+          }
+        case 'winter':
+          // 冬：冰蓝色系
+          return {
+            primary: 'rgba(180, 220, 255, ',
+            secondary: 'rgba(200, 235, 255, ',
+            highlight: 'rgba(220, 245, 255, ',
+            glow: 'rgba(190, 225, 255, '
+          }
+        default:
+          return {
+            primary: 'rgba(200, 220, 255, ',
+            secondary: 'rgba(220, 235, 255, ',
+            highlight: 'rgba(240, 248, 255, ',
+            glow: 'rgba(210, 230, 255, '
+          }
+      }
+    }
+  }
 
   const centerX = 512
   const centerY = 512
   const radius = 320
 
-  // 绘制半透明背景圆球（增强与背景的对比）
-  const sphereGradient = context.createRadialGradient(
-    centerX - 80, centerY - 80, 0,
+  // 获取环境色调
+  const colors = getEnvironmentColors()
+
+  // ===== 晶莹剔透的球体设计 =====
+
+  // 绘制发光外圈（柔和环境色光晕）
+  context.save()
+  const outerGlow = context.createRadialGradient(centerX, centerY, radius * 0.6, centerX, centerY, radius * 1.4)
+  outerGlow.addColorStop(0, colors.glow + '0)')
+  outerGlow.addColorStop(0.5, colors.glow + '0.15)')
+  outerGlow.addColorStop(0.8, colors.glow + '0.08)')
+  outerGlow.addColorStop(1, colors.glow + '0)')
+
+  context.fillStyle = outerGlow
+  context.beginPath()
+  context.arc(centerX, centerY, radius * 1.4, 0, Math.PI * 2)
+  context.fill()
+
+  // 球体主体：纯净玻璃渐变（无深色阴影）
+  const glassGradient = context.createRadialGradient(
+    centerX - 70, centerY - 70, 0,
     centerX, centerY, radius
   )
-  sphereGradient.addColorStop(0, 'rgba(40, 60, 100, 0.7)')     // 中心深色
-  sphereGradient.addColorStop(0.4, 'rgba(60, 90, 140, 0.55)')  // 中间深蓝色
-  sphereGradient.addColorStop(0.7, 'rgba(80, 120, 180, 0.4)') // 外层
-  sphereGradient.addColorStop(1, 'rgba(100, 140, 200, 0.25)') // 边缘更淡
+  glassGradient.addColorStop(0, colors.highlight + '0.4)')    // 左上角高光
+  glassGradient.addColorStop(0.25, colors.secondary + '0.28)')  // 过渡
+  glassGradient.addColorStop(0.5, colors.primary + '0.18)')   // 中间
+  glassGradient.addColorStop(0.75, colors.primary + '0.1)')   // 边缘
+  glassGradient.addColorStop(1, colors.primary + '0.05)')      // 最边缘
 
-  context.fillStyle = sphereGradient
+  context.fillStyle = glassGradient
   context.beginPath()
   context.arc(centerX, centerY, radius, 0, Math.PI * 2)
   context.fill()
 
-  // 绘制内发光环（增强轮廓）
-  const glowRing = context.createRadialGradient(
-    centerX, centerY, radius - 40,
-    centerX, centerY, radius + 15
+  // 左上角锐利高光（模拟光滑反射）
+  const sharpHighlight = context.createRadialGradient(
+    centerX - 90, centerY - 90, 0,
+    centerX - 85, centerY - 85, 50
   )
-  glowRing.addColorStop(0, 'rgba(150, 180, 255, 0)')
-  glowRing.addColorStop(0.7, 'rgba(180, 210, 255, 0.4)')
-  glowRing.addColorStop(1, 'rgba(200, 230, 255, 0)')
+  sharpHighlight.addColorStop(0, 'rgba(255, 255, 255, 0.95)')
+  sharpHighlight.addColorStop(0.3, 'rgba(255, 255, 255, 0.6)')
+  sharpHighlight.addColorStop(0.6, 'rgba(255, 255, 255, 0.25)')
+  sharpHighlight.addColorStop(1, 'rgba(255, 255, 255, 0)')
 
-  context.fillStyle = glowRing
+  context.fillStyle = sharpHighlight
   context.beginPath()
-  context.arc(centerX, centerY, radius + 15, 0, Math.PI * 2)
+  context.arc(centerX - 85, centerY - 85, 45, 0, Math.PI * 2)
   context.fill()
 
-  // 绘制边框（增强轮廓清晰度）
-  context.strokeStyle = 'rgba(200, 230, 255, 0.6)'
-  context.lineWidth = 4
+  // 次级高光（顶部柔光）
+  const secondaryHighlight = context.createRadialGradient(
+    centerX - 50, centerY - 60, 0,
+    centerX - 50, centerY - 60, 120
+  )
+  secondaryHighlight.addColorStop(0, colors.highlight + '0.55)')
+  secondaryHighlight.addColorStop(0.4, colors.highlight + '0.3)')
+  secondaryHighlight.addColorStop(0.7, colors.secondary + '0.15)')
+  secondaryHighlight.addColorStop(1, colors.primary + '0)')
+
+  context.fillStyle = secondaryHighlight
+  context.beginPath()
+  context.arc(centerX, centerY, radius - 8, 0, Math.PI * 2)
+  context.fill()
+
+  // 右下角柔和边缘渐变（无深色阴影）
+  const softEdge = context.createRadialGradient(
+    centerX + 70, centerY + 70, 0,
+    centerX, centerY, radius
+  )
+  softEdge.addColorStop(0, colors.primary + '0)')
+  softEdge.addColorStop(0.5, colors.primary + '0)')
+  softEdge.addColorStop(0.75, colors.primary + '0.08)')
+  softEdge.addColorStop(1, colors.primary + '0.12)')
+
+  context.fillStyle = softEdge
+  context.beginPath()
+  context.arc(centerX, centerY, radius, 0, Math.PI * 2)
+  context.fill()
+
+  // 发光边框（环境色光圈）
+  const borderGlow = context.createRadialGradient(centerX, centerY, radius - 10, centerX, centerY, radius + 10)
+  borderGlow.addColorStop(0, colors.glow + '0)')
+  borderGlow.addColorStop(0.4, colors.secondary + '0.5)')
+  borderGlow.addColorStop(0.6, colors.secondary + '0.6)')
+  borderGlow.addColorStop(1, colors.glow + '0)')
+
+  context.strokeStyle = borderGlow
+  context.lineWidth = 20
   context.beginPath()
   context.arc(centerX, centerY, radius, 0, Math.PI * 2)
   context.stroke()
 
-  // 绘制光晕粒子（减少数量，更精细）
-  for (let i = 0; i < 40; i++) {
-    const angle = Math.random() * Math.PI * 2
-    const particleRadius = 280 + Math.random() * 50
-    const x = centerX + Math.cos(angle) * particleRadius
-    const y = centerY + Math.sin(angle) * particleRadius
-    const particleSize = Math.random() * 3 + 1
-    const alpha = Math.random() * 0.5 + 0.25
+  // 内圈亮边框
+  const innerBorder = context.createRadialGradient(centerX, centerY, radius - 5, centerX, centerY, radius + 5)
+  innerBorder.addColorStop(0, colors.highlight + '0)')
+  innerBorder.addColorStop(0.5, 'rgba(255, 255, 255, 0.75)')
+  innerBorder.addColorStop(1, colors.highlight + '0)')
 
-    context.fillStyle = `rgba(200, 230, 255, ${alpha})`
+  context.strokeStyle = innerBorder
+  context.lineWidth = 8
+  context.beginPath()
+  context.arc(centerX, centerY, radius, 0, Math.PI * 2)
+  context.stroke()
+
+  // 微小光点装饰（围绕球体边缘）
+  for (let i = 0; i < 10; i++) {
+    const angle = (i / 10) * Math.PI * 2
+    const dotRadius = radius + 15
+    const x = centerX + Math.cos(angle) * dotRadius
+    const y = centerY + Math.sin(angle) * dotRadius
+
+    const dotGlow = context.createRadialGradient(x, y, 0, x, y, 12)
+    dotGlow.addColorStop(0, 'rgba(255, 255, 255, 0.95)')
+    dotGlow.addColorStop(0.4, colors.secondary + '0.45)')
+    dotGlow.addColorStop(1, colors.glow + '0)')
+
+    context.fillStyle = dotGlow
     context.beginPath()
-    context.arc(x, y, particleSize, 0, Math.PI * 2)
+    context.arc(x, y, 12, 0, Math.PI * 2)
     context.fill()
   }
+  context.restore()
 
-  // 绘制高光点（增强立体感）
-  const highlightGradient = context.createRadialGradient(
-    centerX - 90, centerY - 90, 0,
-    centerX - 90, centerY - 90, 60
-  )
-  highlightGradient.addColorStop(0, 'rgba(255, 255, 255, 0.6)')
-  highlightGradient.addColorStop(1, 'rgba(255, 255, 255, 0)')
+  // ===== 绘制醒目白色日期文字 =====
 
-  context.fillStyle = highlightGradient
-  context.beginPath()
-  context.arc(centerX - 90, centerY - 90, 60, 0, Math.PI * 2)
-  context.fill()
-
-  // 绘制文字阴影层（增强清晰度）
-  context.shadowColor = 'rgba(0, 0, 0, 0.9)'
-  context.shadowBlur = 30
-  context.shadowOffsetX = 4
-  context.shadowOffsetY = 4
-
-  // 绘制日期文字（使用白色，更粗，更大）
+  // 第一层：白色阴影（最外层，偏移最大）
+  context.save()
+  context.shadowColor = 'rgba(0, 0, 0, 0.6)'
+  context.shadowBlur = 18
+  context.shadowOffsetX = 5
+  context.shadowOffsetY = 5
   context.fillStyle = '#FFFFFF'
-  context.font = 'bold 260px Arial, sans-serif'
+  context.font = 'bold 280px Arial, sans-serif'
   context.textAlign = 'center'
   context.textBaseline = 'middle'
-  context.fillText(dateText, centerX + 2, centerY + 2)
+  context.fillText(dateText, centerX + 5, centerY + 5)
+  context.restore()
 
-  // 绘制文字发光层（在阴影之上）
-  context.shadowColor = 'rgba(200, 230, 255, 0.8)'
-  context.shadowBlur = 40
+  // 第二层：白色阴影（中间层）
+  context.save()
+  context.shadowColor = 'rgba(0, 0, 0, 0.45)'
+  context.shadowBlur = 12
+  context.shadowOffsetX = 3
+  context.shadowOffsetY = 3
+  context.fillStyle = '#FFFFFF'
+  context.fillText(dateText, centerX + 3, centerY + 3)
+  context.restore()
+
+  // 第三层：白色阴影（内层）
+  context.save()
+  context.shadowColor = 'rgba(0, 0, 0, 0.3)'
+  context.shadowBlur = 7
+  context.shadowOffsetX = 1
+  context.shadowOffsetY = 1
+  context.fillStyle = '#FFFFFF'
+  context.fillText(dateText, centerX + 1, centerY + 1)
+  context.restore()
+
+  // 第四层：白色主文字（最顶层，最清晰）
+  context.save()
+  context.shadowColor = 'rgba(0, 0, 0, 0.2)'
+  context.shadowBlur = 3
   context.shadowOffsetX = 0
   context.shadowOffsetY = 0
-
-  // 再次绘制文字（叠加发光）
-  context.fillText(dateText, centerX, centerY)
-
-  // 清除阴影，绘制最上层文字（确保最清晰）
-  context.shadowColor = 'transparent'
-  context.shadowBlur = 0
-
-  // 绘制最上层文字（白色，最清晰）
   context.fillStyle = '#FFFFFF'
   context.fillText(dateText, centerX, centerY)
+  context.restore()
 
   const texture = new THREE.CanvasTexture(canvas)
   const material = new THREE.SpriteMaterial({
     map: texture,
     transparent: true,
-    opacity: 0.95,
-    blending: THREE.AdditiveBlending
+    opacity: 1.0,
+    depthTest: true,
+    depthWrite: false
   })
   const sprite = new THREE.Sprite(material)
-  // 日期球高度：在花朵上方一点点（花朵高度15）
+  // 日期球高度：在花朵上方
   sprite.position.set(tilePosition.x, 18, tilePosition.z)
   sprite.scale.set(7, 7, 1)
   sprite.userData = {
@@ -1877,6 +2241,12 @@ const setTimeOfDay = (value) => {
   updateSkyColor()
   updateLights()
   updateCelestialBodies()
+  // 更新蜜蜂音量（夜晚时关闭）
+  updateBeeVolume()
+  // 切换环境音（晴天时根据日夜切换）
+  if (weather.value === 'clear') {
+    switchAmbientAudio()
+  }
 }
 
 // 设置季节
@@ -1884,6 +2254,8 @@ const setSeason = (value) => {
   season.value = value
   updateTerrainColors(value)
   updateSkyColor()
+  // 更新蜜蜂音量（冬天时关闭）
+  updateBeeVolume()
 }
 
 // 设置天气
@@ -1892,6 +2264,10 @@ const setWeather = (value) => {
   updateLights()
   createWeatherParticles()
   updateCelestialBodies()
+  // 更新蜜蜂音量（雨雪天时关闭）
+  updateBeeVolume()
+  // 切换环境音（天气改变时切换）
+  switchAmbientAudio()
 }
 
 // 切换控制面板显示/隐藏
@@ -2005,6 +2381,8 @@ onMounted(() => {
       season.value = defaultSeason
       console.log(`根据月份 ${firstMonthKey} 设置默认季节为: ${defaultSeason}`)
     }
+    // 初始化时检查并更新蜜蜂音量
+    updateBeeVolume()
     initThreeJS()
   }, 100)
 })
@@ -2182,9 +2560,29 @@ onBeforeUnmount(() => {
   z-index: 150;
   max-height: 75vh;
   overflow-y: auto;
+  overflow-x: hidden;
   min-width: 200px;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   opacity: 1;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+
+.controls-panel::-webkit-scrollbar {
+  width: 6px;
+}
+
+.controls-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.controls-panel::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 3px;
+}
+
+.controls-panel::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
 }
 
 .controls-panel.hidden {
@@ -2224,6 +2622,36 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.panel-buttons .env-btn {
+  width: 100%;
+  padding: 6px 12px;
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.85rem;
+  font-weight: 500;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+  text-align: left;
+}
+
+.panel-buttons .env-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 1);
+}
+
+.panel-buttons .env-btn.active {
+  background: rgba(255, 255, 255, 0.25);
+  color: rgba(255, 255, 255, 1);
+  font-weight: 600;
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 }
 
 .filter-buttons {
@@ -2457,13 +2885,15 @@ onBeforeUnmount(() => {
 }
 
 .month-btn {
-  padding: 8px 16px;
+  padding: 6px 12px;
   border: none;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   color: rgba(255, 255, 255, 0.85);
   font-size: 0.9rem;
   font-weight: 500;
-  border-radius: 15px;
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.3s ease;
   white-space: nowrap;
@@ -2582,9 +3012,11 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 14px;
+  padding: 6px 12px;
   border: 1px solid transparent;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   color: rgba(255, 255, 255, 0.85);
   font-size: 0.85rem;
   font-weight: 500;
@@ -2629,8 +3061,7 @@ onBeforeUnmount(() => {
   z-index: 100;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 12px 20px;
+  padding: 12px 24px;
   border: none;
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.15);
@@ -2654,16 +3085,6 @@ onBeforeUnmount(() => {
 
 .back-btn:active {
   transform: translateY(0);
-}
-
-.back-btn .back-icon {
-  width: 20px;
-  height: 20px;
-  transition: transform 0.3s ease;
-}
-
-.back-btn:hover .back-icon {
-  transform: translateX(-3px);
 }
 
 .back-btn span {
